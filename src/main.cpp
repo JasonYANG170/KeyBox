@@ -22,7 +22,8 @@
 #include <FS.h>
 #include "SD.h"
 //配置数据结构
-String keySize="";
+int callbacktimes;
+int keySize;
 const int siteSize = 5;
 String site[siteSize];
 struct key {
@@ -34,6 +35,7 @@ const char* data = "Callback function called";
 static int callback(void *data, int argc, char **argv, char **azColName){
     int i;
     Serial.printf("%s: ", (const char*)data);
+    callbacktimes++;
     for (i = 0; i<argc; i++){
         // 初始化一个空的字符串
         String outputString = "";
@@ -48,6 +50,7 @@ static int callback(void *data, int argc, char **argv, char **azColName){
 // 现在outputString包含了格式化后的字符串
         Serial.println(outputString);
     }
+
     Serial.printf("\n");
     return 0;
 }
@@ -102,6 +105,9 @@ void setup() {
 
         return;
     }
+    Serial.println("All Have Data Times:");
+    Serial.println(callbacktimes);
+    callbacktimes=0;
 
     rc = db_exec(db1, "SELECT * FROM key;");
     if (rc != SQLITE_OK) {
@@ -110,7 +116,9 @@ void setup() {
         return;
     }
 
-
+    Serial.println("All Have Data Times2:");
+    Serial.println(callbacktimes);
+    callbacktimes=0;
     sqlite3_close(db1);
 
 
