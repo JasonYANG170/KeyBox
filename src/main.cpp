@@ -24,10 +24,12 @@
 #include <sstream>
 #include <string>
 #include <sstream>
+#include <vector>
 #include "SD.h"
 //配置数据结构
 using namespace std;
 int OutPutTimes;
+
 String OutPutString = "";
 int keySize;
 
@@ -90,8 +92,21 @@ int db_exec(sqlite3 *db, const char *sql) {
 
     return rc;
 }
-
-void addSiteDataToArr() {
+void removeDuplicates(String arr[], int& n) {//此函数提供方法删除数组内重复的值
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n;) {
+            if (arr[i] == arr[j]) {
+                for (int k = j; k < n - 1; k++) {
+                    arr[k] = arr[k + 1];
+                }
+                n--;
+            } else {
+                j++;
+            }
+        }
+    }
+}
+void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数组中，界面分类用
     sqlite3 *db1;
 
     char *zErrMsg = 0;
@@ -117,36 +132,36 @@ void addSiteDataToArr() {
     const int SiteSize = OutPutTimes;
 
     String Site[SiteSize];//根据数据长度确认数组长度
-    std::string OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
+   // std::string OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
+    String inputString = OutPutString; // 输入的字符串
+    int startIndex = 0;
+    int endIndex = 0;
 
-    std::istringstream ss(OutPutString);
-    std::string line;
+        for(int i=0;i<OutPutTimes;i++) {
+            startIndex = inputString.indexOf("=", endIndex);
+            if (startIndex == -1) {
+                break; // 如果没有找到等号，退出循环
+            }
 
-    while (std::getline(ss, line, '\n')) {
-        // Split the line based on '='
-        size_t found = line.find('=');
-        if (found != std::string::npos) {
-            std::string key = line.substr(0, found);
-            std::string value = line.substr(found + 1);
+            endIndex = inputString.indexOf("\n", startIndex); // 查找换行符的位置
 
-            // Trim any leading/trailing spaces
-            key.erase(0, key.find_first_not_of(" \n\r\t"));
-            key.erase(key.find_last_not_of(" \n\r\t") + 1);
-            value.erase(0, value.find_first_not_of(" \n\r\t"));
-            value.erase(value.find_last_not_of(" \n\r\t") + 1);
-            const char* cString = key.c_str();
+            if (endIndex == -1) {
+                endIndex = inputString.length(); // 如果没有找到换行符，则使用字符串的末尾作为终点
+            }
 
-            // 输出C风格的字符串
-            Serial.println(cString);
-            Serial.println("+");
-            const char* cString2 = value.c_str();
+            String value = inputString.substring(startIndex + 2, endIndex); // 提取等号后面的内容，包括空格
 
-            // 输出C风格的字符串
-            Serial.println(cString2);
-            //std::cout << key << " = " << value << std::endl;
+            Serial.println(value);
+            Site[i] = value;
+
         }
+    removeDuplicates(Site, OutPutTimes);
+    Serial.println("--------分割-----------");
+    for (int i = 0; i < OutPutTimes; i++) {
+        Serial.println(Site[i]);
     }
 
+\
     //   OutPutString.
 //
 //    char *token;
