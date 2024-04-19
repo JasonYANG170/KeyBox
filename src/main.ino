@@ -674,7 +674,7 @@ void pid_ui_show()//PID界面
 {
     move_bar(&pid_line_y, &pid_line_y_trg);
     move(&pid_box_y, &pid_box_y_trg);
-    move_width(&pid_box_width, &pid_box_width_trg, pid_select, key_msg.id);
+    move_width(&pid_box_width, &pid_box_width_trg, pid_select+1, key_msg.id);//修改pid_select加1，修复指针问题
     u8g2.drawVLine(126, 0, 61);
     u8g2.drawPixel(125, 0);
     u8g2.drawPixel(127, 0);
@@ -910,12 +910,15 @@ void pid_edit_proc(void)//pid编辑界面处理函数
 
 void pid_proc()//pid界面处理函数
 {
+
     pid_ui_show();
+
     if (key_msg.pressed)
     {
         key_msg.pressed = false;
         switch (key_msg.id)
         {
+
             case 0:
                 if (pid_select != 0)
                 {
@@ -952,7 +955,8 @@ void pid_proc()//pid界面处理函数
                 }
                 else
                 {
-                    ui_index = M_PID_EDIT;
+
+                    ui_index = M_ABOUT;
                 }
                 break;
             default:
@@ -961,7 +965,8 @@ void pid_proc()//pid界面处理函数
         pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;
     }
 }
-
+// 函数原型声明
+void addUser(char* mainnowdisplay);
 void select_proc(void)//选择界面处理重要的
 {
     if (key_msg.pressed)
@@ -1004,42 +1009,48 @@ void select_proc(void)//选择界面处理重要的
                         ui_state = S_DISAPPEAR; //S_DISAPPEAR;
                         ui_index = M_LOGO;//M_LOGO;
                         break;
-                    case 1:     //pid
+//                    case 1:     //pid
+//                        addUser(list[ui_select].select);
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_PID;
+//                        break;
+//                    case 2:   //icon
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_ICON;
+//                        break;
+//                    case 3:   //chart
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_CHART;
+//                        break;
+//                    case 4:   //textedit
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_TEXT_EDIT;
+//                        break;
+//                    case 6:   //about
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_ABOUT;
+//                        break;
+//                    case 7:   //about
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_ABOUT;
+//                        break;
+//                    case 8:   //about
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_ABOUT;
+//                        break;
+                    default:
+                        addUser(list[ui_select].select);
                         ui_state = S_DISAPPEAR;
                         ui_index = M_PID;
-                        break;
-                    case 2:   //icon
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_ICON;
-                        break;
-                    case 3:   //chart
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_CHART;
-                        break;
-                    case 4:   //textedit
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_TEXT_EDIT;
-                        break;
-                    case 6:   //about
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_ABOUT;
-                        break;
-                    case 7:   //about
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_ABOUT;
-                        break;
-                    case 8:   //about
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_ABOUT;
-                        break;
-                    default:
                         break;
                 }
                 //Serial.println("Btn2");
             default:
                 break;
         }
-        //Serial.println(ui_select);
+        Serial.println("ui_select------------------test");
+        Serial.println(ui_select);
+        Serial.println(list[ui_select].select);
         box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;
     }
     select_ui_show();
@@ -1290,7 +1301,8 @@ int db_exec(sqlite3 *db, const char *sql) {
 
     return rc;
 }
-void addUser(){
+
+void addUser(char* mainnowdisplay){
     sqlite3 *db1;
 
     char *zErrMsg = 0;
@@ -1305,7 +1317,11 @@ void addUser(){
     if (openDb("/sd/key.db", &db1))
         return;
 
-    rc = db_exec(db1, "SELECT user FROM key WHERE site = 'example.com';");
+    char query[100]; // 假设足够大以容纳您的查询语句
+
+    // 构建查询语句
+    std::sprintf(query, "SELECT user FROM key WHERE site = '%s';", mainnowdisplay);
+    rc = db_exec(db1, query);
     if (rc != SQLITE_OK) {
         sqlite3_close(db1);
 
@@ -1360,7 +1376,11 @@ void addUser(){
         for (int i = 0; i < pidSize; i++) {
             pid[i].select = strdup(Site[i]); // 使用strdup创建分配的字符串副本
         }
-
+        Serial.println("--------testpidarr-----------");
+        for (int i = 0; i < OutPutTimes; i++) {
+            Serial.println(pid[i].select);
+        }
+        Serial.println("--------overpidarr-----------");
 
     }
 
@@ -1464,9 +1484,9 @@ void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数�
         // 添加值到结构体数组
 
         // 打印数组中的值
-
+        list[0].select = "MAIN";
         for (int i = 0; i < listSize; i++) {
-            list[i].select = strdup(Site[i]); // 使用strdup创建分配的字符串副本
+            list[i+1].select = strdup(Site[i]); // 使用strdup创建分配的字符串副本
         }
 
 
@@ -1501,7 +1521,8 @@ void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数�
 void setup() {
     Serial.begin(115200);
     addSiteDataToArr();
- addUser();
+    pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+    pid[0].select = strdup("main");
     // 动态分配内存以存储结构体数组
 
 
