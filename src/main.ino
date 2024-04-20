@@ -297,6 +297,7 @@ enum//ui_index
     M_TEXT_EDIT,//文字编辑
     M_VIDEO,//视频显示
     M_ABOUT,//关于本机
+    M_IMPORT,
 };
 
 
@@ -347,8 +348,8 @@ SELECT_LIST icon[]
         {
                 {"Main"},
                 {"Authenticator"},
+                {"Import"},
                 {"Edit"},
-                {"Settings"},
         };
 
 //设备名称
@@ -380,6 +381,98 @@ typedef struct
 
 KEY_MSG key_msg = { 0 };
 
+void createJson(String fileName, String key, String value) {
+    StaticJsonDocument<200> doc;   //JSON document size
+
+    doc[key] = value;
+
+    delay(500); // 添加延时以确保前一个文件句柄已被释放
+
+    File jsonFile = SD.open("/"+fileName, FILE_WRITE); // 定义并初始化File对象
+
+    delay(100); // 添加另一个延时
+
+    if (jsonFile) {
+        serializeJson(doc, jsonFile);
+        jsonFile.close();
+    } else {
+        Serial.println("Error opening file for writing!");
+    }
+}
+void updateJson(String fileName, String key, String value) {
+  File  jsonFile = SD.open("/"+fileName, FILE_READ);
+
+    DynamicJsonDocument doc(1024);
+
+    DeserializationError error = deserializeJson(doc, jsonFile);
+
+    jsonFile.close();
+
+    if (error) {
+        Serial.println("Error deserializing JSON file!");
+        return;
+    }
+
+    doc[key] = value;
+
+    delay(100); // 添加延时以确保前一个文件句柄已被释放
+
+    jsonFile = SD.open("/"+fileName, FILE_WRITE);
+
+    if (jsonFile) {
+        serializeJson(doc, jsonFile);
+        jsonFile.close();
+    } else {
+        Serial.println("Error opening222 file for writing!");
+    }
+}
+void writeCSV(){
+
+    // 打开CSV文件
+    File csvFile = SD.open("/data.csv");
+
+    // 跳过第一行
+    if (csvFile) {
+        csvFile.readStringUntil('\n'); // 跳过第一行
+    } else {
+        Serial.println("Error opening CSV file!");
+        return;
+    }
+
+    // 读取CSV文件内容并创建/更新JSON文件
+    while (csvFile.available()) {
+        String data = csvFile.readStringUntil('\n'); // 读取一行数据
+        if (data == "") {
+            break; // 结束循环，文件已读取完整
+        }
+
+        String ip = data.substring(0, data.indexOf(","));
+        int firstCommaIndex = data.indexOf(",");
+        int secondCommaIndex = data.indexOf(",", firstCommaIndex + 1);
+        int thirdCommaIndex = data.indexOf(",", secondCommaIndex + 1);
+        int fourthCommaIndex = data.indexOf(",", thirdCommaIndex + 1);
+        int fourth2CommaIndex = data.indexOf(",", fourthCommaIndex + 1);
+        String key = data.substring(thirdCommaIndex + 1, fourthCommaIndex);
+        String value = data.substring(fourthCommaIndex + 1, fourth2CommaIndex);
+        Serial.println(ip);
+        Serial.println(key);
+        Serial.println(value);
+        Serial.println("----------------------------------");
+        String fileName = ip + ".json";
+
+        if (SD.exists("/" + fileName)) {
+            // 文件已存在，更新JSON文件中的键值对
+            updateJson(fileName, key, value);
+        } else {
+            // 文件不存在，创建新的JSON文件
+            createJson(fileName, key, value);
+        }
+    }
+
+    csvFile.close(); // 关闭CSV文件
+    // 关闭CSV文件
+
+}
 bool get_key_val(uint8_t ch)
 {
     switch (ch)
@@ -889,7 +982,17 @@ Serial.println(SiteIn);
     // u8g2.drawStr(2,60,"EEPROM : 4KB");
 
 }
+void import_ui_show()//about界面
+{
 
+
+        u8g2.setFont(u8g2_font_ncenB08_tr);
+        u8g2.setCursor(0, 10);
+
+        u8g2.print("Hello, World!");
+
+
+}
 /**************************界面处理*******************************/
 
 void logo_proc()//logo界面处理函数
@@ -1125,7 +1228,8 @@ void icon_proc(void)//icon界面处理
                         ui_index = M_SELECT;
                         break;
                     case 2:ui_state = S_DISAPPEAR;
-                        ui_index = M_PID;
+                        ui_index = M_IMPORT;
+
                         break;
                 }
                 Serial.println("button press");
@@ -1230,6 +1334,42 @@ void about_proc()//about界面处理函数
     }
     about_ui_show();
 }
+
+void import_proc()//about界面处理函数
+{
+    u8g2.setFont(u8g2_font_ncenB08_tr);
+    u8g2.setCursor(0, 10);
+    u8g2.drawStr(2,12,"PLEASE PUSH");
+    u8g2.println("IF YOU ARE RIGHT");
+
+    if (key_msg.pressed)
+    {
+        key_msg.pressed = false;
+        switch (key_msg.id)
+        {
+            case 2: {
+                ui_state = S_DISAPPEAR;
+
+                u8g2.firstPage();
+
+                u8g2.setFont(u8g2_font_ncenB08_tr);
+                u8g2.setCursor(0, 10);
+                u8g2.println("Now WILL RUN");
+
+                delay(5000); // 继续等待5秒
+              //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+            }
+            default:
+                ui_state = S_DISAPPEAR;
+                ui_index = M_ICON;
+                break;
+
+        }
+    }
+  //  delay(5000); // 等待5秒
+
+
+}
 /********************************总的UI显示************************************/
 
 void ui_proc()//总的UI进程
@@ -1265,6 +1405,9 @@ void ui_proc()//总的UI进程
 
                     about_proc();
                     break;
+                case M_IMPORT:
+                    import_proc();
+                break;
                 default:
                     break;
             }
