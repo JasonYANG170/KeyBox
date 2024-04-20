@@ -1068,10 +1068,10 @@ void select_proc(void)//选择界面处理重要的
 //                        break;
                     default:
                         SiteIn=list[ui_select].select;
-                        if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
+                       // if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
                             addUser(list[ui_select].select);
-                            justonece+=1;
-                        }
+                       //     justonece+=1;
+                     //   }
                         pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
                         ui_state = S_DISAPPEAR;
                         ui_index = M_PID;
@@ -1283,7 +1283,21 @@ void ui_proc()//总的UI进程
 int compare(const void *a, const void *b) {
     return strcmp(((SELECT_LIST*)a)->select, ((SELECT_LIST*)b)->select);
 }
+int compare2(const void *elem1, const void *elem2) {
+    SELECT_LIST* item1 = (SELECT_LIST*)elem1;
+    SELECT_LIST* item2 = (SELECT_LIST*)elem2;
+
+    // 判断如果元素为最后一个元素，则不进行排序
+    if (item1 == &pid[pidSize-1] || item2 == &pid[pidSize-1]) {
+        return 0; // 返回0表示两个元素相等
+    }
+
+    return strcmp(item1->select, item2->select);
+}
+
 void addUser(char* mainnowdisplay){
+    free(pid);
+    pid = NULL;
     Serial.println("Btn2----------------------");
     Serial.println(mainnowdisplay);
     String filePath = String("/") + String(mainnowdisplay);
@@ -1320,6 +1334,9 @@ void addUser(char* mainnowdisplay){
     Serial.print("numx------------xxx: ");
     Serial.println(numx);
     pidSize=numx+1;//此值自增1才可出返回设置
+
+
+
     pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
     int num=0;
     // 仅输出JSON键而不输出值
@@ -1329,17 +1346,19 @@ void addUser(char* mainnowdisplay){
         pid[num].select =strdup(keyValue.key().c_str());
         num++;
     }
-    qsort(pid, pidSize, sizeof(SELECT_LIST), compare);
+    pid[num].select =strdup("back");
+    qsort(pid, pidSize, sizeof(SELECT_LIST), compare2);
 
     // 在串口上打印按照字母顺序排序后的结果
-    for (int i = 0; i < pidSize; i++) {
-        Serial.println(pid[i].select);
-    }
-    pid[num].select =strdup("back");
+  //  for (int i = 0; i < pidSize; i++) {
+   //     Serial.println(pid[i].select);
+   // }
+
   //  pid[4].select =strdup("keyVal");
     Serial.println( "pid[3].select");
 //    Serial.println( pid[2].select);
  //   Serial.println( pid[3].select);
+
 }
 
 void addPassword(char* mainsite,char* mainuser){
