@@ -336,10 +336,11 @@ uint8_t pid_num = 3;//PID选项数量
 //  {"{ About }"},
 //  {"{ About }"},
 //};
+int listSize = 3;//选择界面菜单个数
+int pidSize = 7;
 
-uint8_t list_num = 3;//选择界面数量
-uint8_t single_line_length = 63 / list_num;
-uint8_t total_line_length = single_line_length * list_num + 1;
+uint8_t single_line_length = 63 / listSize;
+uint8_t total_line_length = single_line_length * listSize + 1;
 
 SELECT_LIST icon[]
         {
@@ -658,7 +659,7 @@ void select_ui_show()//选择界面
     u8g2.drawVLine(126, 0, total_line_length);
     u8g2.drawPixel(125, 0);
     u8g2.drawPixel(127, 0);
-    for (uint8_t i = 0; i < list_num; ++i)
+    for (uint8_t i = 0; i < listSize; ++i)
     {
         u8g2.drawStr(x, 16 * i + y + 12, list[i].select);  // 第一段输出位置
         u8g2.drawPixel(125, single_line_length * (i + 1));
@@ -1008,7 +1009,7 @@ void select_proc(void)//选择界面处理重要的
 
                 break;
             case 1:
-                if ((ui_select + 2) > list_num) break;//变更菜单数组个数3
+                if ((ui_select + 2) > listSize) break;//变更菜单数组个数3
                 ui_select += 1;
                 line_y_trg += single_line_length;
                 if ((ui_select + 1) > (4 - y / 16))
@@ -1265,8 +1266,7 @@ void ui_proc()//总的UI进程
     u8g2.sendBuffer();
 }
 
-int listSize = 4;
-int pidSize = 4;
+
 
 
 static int callback(void *data, int argc, char **argv, char **azColName){
@@ -1514,108 +1514,71 @@ void sqlAPI(){
     sqlite3_close(db1);
 
 }
+void allcount(){
+    File root = SD.open("/");
+    int count=0;
+    while (true) {
+        File entry = root.openNextFile();
+        if (!entry) {
+            // 没有更多文件
+            break;
+        }
+
+        if (!entry.isDirectory() && entry.name()[0] != '.') {
+            String filename = entry.name();
+            if (filename.endsWith(".json")) {
+                count++;
+            }
+        }
+
+        entry.close();
+    }
+
+    root.close();
+   listSize=count+1;
+}
 void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数组中，界面分类用
-    sqlite3 *db1;
-
-    char *zErrMsg = 0;
-    int rc;
-
-    SPI.begin();
-    SD.begin();
-
-    sqlite3_initialize();
-
-    // Open database 1
-    if (openDb("/sd/key.db", &db1))
-        return;
-    rc = db_exec(db1, "SELECT DISTINCT site FROM key;");
-    if (rc != SQLITE_OK) {
-        sqlite3_close(db1);
-
-        return;
-    }
-    Serial.println(OutPutString);
-
-    Serial.println("All Have Data Times:");
-    const int SiteSize = OutPutTimes;
-    char* Site[SiteSize]; // Change the array type to char*
-
-   // String OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
-    String inputString = OutPutString; // Declare and initialize inputString
-    int startIndex = 0;
-    int endIndex = 0;
-
-    for (int i = 0; i < OutPutTimes; i++) {
-        startIndex = inputString.indexOf("=", endIndex);
-        if (startIndex == -1) {
-            break; // If the equal sign is not found, exit the loop
-        }
-
-        endIndex = inputString.indexOf("\n", startIndex); // Find the position of the newline character
-
-        if (endIndex == -1) {
-            endIndex = inputString.length(); // If the newline character is not found, use the end of the string as the endpoint
-        }
-
-        String value = inputString.substring(startIndex + 2, endIndex); // Extract the content after the equal sign, including spaces
-
-        Serial.println(value);
-        // Convert String to char* and store in Site
-        Site[i] = strdup(value.c_str()); // Use strdup to allocate memory for the new string
-
-        // Release memory after usage if needed
-        // free(Site[i]);
-    }
-
-    Serial.println("--------test-----------");
-    for (int i = 0; i < OutPutTimes; i++) {
-        Serial.println(Site[i]);
-    }
-    Serial.println("--------over-----------");
-
+    Serial.println("read JSON Start:");
+    File root = SD.open("/");
+    int index = 0; // 用于追踪数组中的索引位置
     list = (SELECT_LIST*)malloc(listSize * sizeof(SELECT_LIST));
-
-    if (list != NULL) {
-        // 添加值到结构体数组
-
-        // 打印数组中的值
-        list[0].select = "MAIN";
-        for (int i = 0; i < listSize; i++) {
-            list[i+1].select = strdup(Site[i]); // 使用strdup创建分配的字符串副本
+    int fileCount = 0;//此值传向list 数组长度
+    while (true) {
+        File entry = root.openNextFile();
+        if (!entry) {
+            // 没有更多文件
+            break;
         }
 
+        if (!entry.isDirectory() && entry.name()[0] != '.') {
+            const char* filename = entry.name();
+            if (strstr(filename, ".json") != NULL) {
+                list[index+1].select = strdup(filename);
+                index++;
+            }
+        }
 
+        entry.close();
     }
 
-
-    //   OutPutString.
-//
-//    char *token;
-//
-//    token = strtok( OutPutString, "\n");
-//    for (int i = 0; i < OutPutTimes; i++) {
-//        char *value = strchr(token, '=');
-//
-//        if (value != NULL) {
-//            value++; // 移动到等号后面的值
-//            Site[i] = value;
-//        }
-//
-//        token = strtok(NULL, "\n");
-//    }
-
-
-
-
-    Serial.println(OutPutTimes);
-    //初始化
-    OutPutString = "";
-    OutPutTimes = 0;
-    sqlite3_close(db1);
 }
 void setup() {
     Serial.begin(115200);
+
+
+    if (!SD.begin(7)) {
+        Serial.println("SD 卡初始化失败！");
+        return;
+    }
+    allcount();
+    // 写入数据到 data.json 文件
+   // writeJSONToFile();
+
+    // 读取并打印 SD 卡上的所有 JSON 文件
+  //  readAndPrintAllJSONFiles();
+   // readJSONFile() ;
     addSiteDataToArr();
+    list[0].select = strdup("Main");
     pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
     pid[0].select = strdup("main");
     // 动态分配内存以存储结构体数组
