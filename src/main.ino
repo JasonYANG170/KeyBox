@@ -32,7 +32,7 @@ int OutPutTimes;
 
 String OutPutString = "";
 int keySize;
-
+char* passwordIn;
 struct key {
     String user;
     String password;
@@ -320,6 +320,7 @@ typedef struct
 SELECT_LIST* list = NULL; // 初始化结构体数组指针
 
 SELECT_LIST* pid = NULL; // 初始化结构体数组指针
+
 
 uint8_t pid_num = 3;//PID选项数量
 
@@ -851,14 +852,31 @@ void text_edit_ui_show()
     }
 
 }
+char* SiteIn;
+char* UserIn;
 
 void about_ui_show()//about界面
 {
+  //  std::string SiteStr = SiteIn;
+    Serial.println("PUSH---------");
+Serial.println(SiteIn);
+    Serial.println(UserIn);
+    Serial.println(passwordIn);
+    std::string SiteStr = SiteIn;
+    // Concatenate the strings
+    std::string SiteString = "Site: " + SiteStr;
+    std::string UserStr = UserIn;
 
-    u8g2.drawStr(2, 12, "MCU : ESP32");
-    u8g2.drawStr(2, 28, "FLASH : 4MB");
-    u8g2.drawStr(2, 44, "SRAM : 520KB");
-    u8g2.drawStr(2, 60, "RTC SRAM : 16KB");
+    // Concatenate the strings
+    std::string UserString = "User: " + UserStr;
+    std::string PasswordStr = passwordIn;
+
+    // Concatenate the strings
+    std::string PasswordString = "Password: " + PasswordStr;
+    u8g2.drawStr(2, 12, SiteString.c_str());
+    u8g2.drawStr(2, 28, UserString.c_str());
+    u8g2.drawStr(2, 44, PasswordString.c_str());
+    u8g2.drawStr(2, 60, "---Press to Driver---");
 
     // u8g2.drawStr(2,12,"MCU : MEGA2560");
     // u8g2.drawStr(2,28,"FLASH : 256KB");
@@ -907,7 +925,7 @@ void pid_edit_proc(void)//pid编辑界面处理函数
     }
     pid_edit_ui_show();
 }
-
+void addPassword(char* mainsite,char* mainuser);
 void pid_proc()//pid界面处理函数
 {
 
@@ -955,7 +973,8 @@ void pid_proc()//pid界面处理函数
                 }
                 else
                 {
-
+                    UserIn=pid[pid_select].select;
+                    addPassword(SiteIn,UserIn);
                     ui_index = M_ABOUT;
                 }
                 break;
@@ -1039,6 +1058,7 @@ void select_proc(void)//选择界面处理重要的
 //                        ui_index = M_ABOUT;
 //                        break;
                     default:
+                        SiteIn=list[ui_select].select;
                         addUser(list[ui_select].select);
                         ui_state = S_DISAPPEAR;
                         ui_index = M_PID;
@@ -1229,6 +1249,7 @@ void ui_proc()//总的UI进程
                     pid_edit_proc();
                     break;
                 case M_ABOUT:
+
                     about_proc();
                     break;
                 default:
@@ -1383,6 +1404,80 @@ void addUser(char* mainnowdisplay){
         Serial.println("--------overpidarr-----------");
 
     }
+
+    Serial.println(OutPutTimes);
+    //初始化
+    OutPutString = "";
+    OutPutTimes = 0;
+    sqlite3_close(db1);
+
+}
+
+void addPassword(char* mainsite,char* mainuser){
+    sqlite3 *db1;
+
+    char *zErrMsg = 0;
+    int rc;
+
+    SPI.begin();
+    SD.begin();
+
+    sqlite3_initialize();
+
+    // Open database 1
+    if (openDb("/sd/key.db", &db1))
+        return;
+
+    char query[100]; // 假设足够大以容纳您的查询语句
+
+    // 构建查询语句
+    std::sprintf(query, "SELECT password FROM key WHERE site = '%s' AND user = '%s';", mainsite,mainuser);
+    rc = db_exec(db1, query);
+    if (rc != SQLITE_OK) {
+        sqlite3_close(db1);
+
+        return;
+    }
+    Serial.println(OutPutString);
+
+    Serial.println("All Have Data Times:");
+    const int SiteSize = OutPutTimes;
+
+
+    // String OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
+    String inputString = OutPutString; // Declare and initialize inputString
+    int startIndex = 0;
+    int endIndex = 0;
+
+    //for (int i = 0; i < OutPutTimes; i++) {
+        startIndex = inputString.indexOf("=", endIndex);
+    //    if (startIndex == -1) {
+      //      break; // If the equal sign is not found, exit the loop
+     //   }
+
+        endIndex = inputString.indexOf("\n", startIndex); // Find the position of the newline character
+
+        if (endIndex == -1) {
+            endIndex = inputString.length(); // If the newline character is not found, use the end of the string as the endpoint
+        }
+
+        String value = inputString.substring(startIndex + 2, endIndex); // Extract the content after the equal sign, including spaces
+
+        Serial.println(value);
+        // Convert String to char* and store in Site
+        passwordIn = strdup(value.c_str());
+    Serial.println("password--------");
+    Serial.println(passwordIn);
+    Serial.println("password--------");
+
+        // Release memory after usage if needed
+        // free(Site[i]);
+    //}
+
+
+
+
+
 
     Serial.println(OutPutTimes);
     //初始化
