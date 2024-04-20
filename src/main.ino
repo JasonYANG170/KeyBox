@@ -17,7 +17,7 @@
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <sqlite3.h>
+
 #include <SPI.h>
 #include <FS.h>
 #include <iostream>
@@ -939,9 +939,12 @@ void pid_proc()//pid界面处理函数
     if (key_msg.pressed)
     {
         key_msg.pressed = false;
+        Serial.println("-------------------");
+        Serial.println(pid_select);
+        Serial.println(pidSize);
         switch (key_msg.id)
         {
-
+          //  Serial.println(pid_select);
             case 0:
                 if (pid_select != 0)
                 {
@@ -955,7 +958,7 @@ void pid_proc()//pid界面处理函数
                     break;
                 }
             case 1:
-                if (pid_select != 3)
+                if (pid_select != pidSize-1)//修改pidSize-1，修复back导致数组溢出，下同
                 {
                     pid_select += 1;
                     pid_line_y_trg += 15;
@@ -967,7 +970,7 @@ void pid_proc()//pid界面处理函数
                 }
                 break;
             case 2:
-                if (pid_select == 3)
+                if (pid_select == pidSize-1)
                 {
                     ui_index = M_SELECT;
                     ui_state = S_DISAPPEAR;
@@ -991,6 +994,7 @@ void pid_proc()//pid界面处理函数
 }
 // 函数原型声明
 void addUser(char* mainnowdisplay);
+int justonece=0;
 void select_proc(void)//选择界面处理重要的
 {
     if (key_msg.pressed)
@@ -1064,7 +1068,10 @@ void select_proc(void)//选择界面处理重要的
 //                        break;
                     default:
                         SiteIn=list[ui_select].select;
-                        addUser(list[ui_select].select);
+                        if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
+                            addUser(list[ui_select].select);
+                            justonece+=1;
+                        }
                         pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
                         ui_state = S_DISAPPEAR;
                         ui_index = M_PID;
@@ -1272,65 +1279,16 @@ void ui_proc()//总的UI进程
 }
 
 
-
-
-static int callback(void *data, int argc, char **argv, char **azColName){
-    int i;
-    Serial.printf("%s: ", (const char*)data);
-    OutPutTimes++;
-
-    Serial.println("----------------------");
-    for (i = 0; i<argc; i++){
-        // 初始化一个空的字符串
-
-
-// 使用sprintf将输出格式化
-       char buffer[50];
-       sprintf(buffer, "%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-        OutPutString+=buffer;
-// 将格式化后的字符串连接到OutPutString
-     //   OutPutString = const_cast<char *>( "%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-
-   //     Serial.printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-// 现在OutPutString包含了格式化后的字符串
-
-    }
-
-    Serial.printf("\n");
-    return 0;
+// 比较函数，用于对字符串进行排序
+int compare(const void *a, const void *b) {
+    return strcmp(((SELECT_LIST*)a)->select, ((SELECT_LIST*)b)->select);
 }
-
-int openDb(const char *filename, sqlite3 **db) {
-    int rc = sqlite3_open(filename, db);
-    if (rc) {
-        Serial.printf("Can't open database: %s\n", sqlite3_errmsg(*db));
-        return rc;
-    } else {
-        Serial.printf("Opened database successfully\n");
-    }
-    return rc;
-}
-
-char *zErrMsg = 0;
-int db_exec(sqlite3 *db, const char *sql) {
-    Serial.println(sql);
-    long start = micros();
-    int rc = sqlite3_exec(db, sql, callback, (void*)data, &zErrMsg);
-    if (rc != SQLITE_OK) {
-        Serial.printf("SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-    } else {
-        Serial.printf("Operation done successfully\n");
-    }
-    Serial.print(F("Time taken:"));
-    Serial.println(micros()-start);
-
-    return rc;
-}
-
 void addUser(char* mainnowdisplay){
-    File jsonFile = SD.open("/data.json");
-
+    Serial.println("Btn2----------------------");
+    Serial.println(mainnowdisplay);
+    String filePath = String("/") + String(mainnowdisplay);
+    // 打开 data.json 文件
+    File jsonFile = SD.open(filePath);
     if (!jsonFile) {
         Serial.println("无法打开 data.json 文件");
         return;
@@ -1371,115 +1329,65 @@ void addUser(char* mainnowdisplay){
         pid[num].select =strdup(keyValue.key().c_str());
         num++;
     }
+    qsort(pid, pidSize, sizeof(SELECT_LIST), compare);
 
+    // 在串口上打印按照字母顺序排序后的结果
+    for (int i = 0; i < pidSize; i++) {
+        Serial.println(pid[i].select);
+    }
     pid[num].select =strdup("back");
   //  pid[4].select =strdup("keyVal");
     Serial.println( "pid[3].select");
-    Serial.println( pid[2].select);
-    Serial.println( pid[3].select);
+//    Serial.println( pid[2].select);
+ //   Serial.println( pid[3].select);
 }
 
 void addPassword(char* mainsite,char* mainuser){
-    sqlite3 *db1;
 
-    char *zErrMsg = 0;
-    int rc;
 
-    SPI.begin();
-    SD.begin();
+    String filePath = String("/") + String(mainsite);
+    // 打开 data.json 文件
+    File jsonFile = SD.open(filePath);
 
-    sqlite3_initialize();
-
-    // Open database 1
-    if (openDb("/sd/key.db", &db1))
-        return;
-
-    char query[100]; // 假设足够大以容纳您的查询语句
-
-    // 构建查询语句
-    std::sprintf(query, "SELECT password FROM key WHERE site = '%s' AND user = '%s';", mainsite,mainuser);
-    rc = db_exec(db1, query);
-    if (rc != SQLITE_OK) {
-        sqlite3_close(db1);
-
+    if (!jsonFile) {
+        Serial.println("无法打开文件");
         return;
     }
-    Serial.println(OutPutString);
 
-    Serial.println("All Have Data Times:");
-    const int SiteSize = OutPutTimes;
+    // 读取文件内容
+    String jsonStr;
+    while (jsonFile.available()) {
+        char c = jsonFile.read();
+        jsonStr += c;
+    }
 
+    // 关闭文件
+    jsonFile.close();
 
-    // String OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
-    String inputString = OutPutString; // Declare and initialize inputString
-    int startIndex = 0;
-    int endIndex = 0;
+    // 解析 JSON 数据
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, jsonStr);
 
-    //for (int i = 0; i < OutPutTimes; i++) {
-        startIndex = inputString.indexOf("=", endIndex);
-    //    if (startIndex == -1) {
-      //      break; // If the equal sign is not found, exit the loop
-     //   }
-
-        endIndex = inputString.indexOf("\n", startIndex); // Find the position of the newline character
-
-        if (endIndex == -1) {
-            endIndex = inputString.length(); // If the newline character is not found, use the end of the string as the endpoint
-        }
-
-        String value = inputString.substring(startIndex + 2, endIndex); // Extract the content after the equal sign, including spaces
-
-        Serial.println(value);
+    if (error) {
+        Serial.println("解析 JSON 失败");
+        return;
+    }
+    Serial.println("read----");
+    Serial.println(mainuser);
+    // 提取并输出 location 字段的值
+    const char* location = doc[mainuser];
+    Serial.println("read----");
+    Serial.println(location);
         // Convert String to char* and store in Site
-        passwordIn = strdup(value.c_str());
+        passwordIn = strdup(location);
     Serial.println("password--------");
     Serial.println(passwordIn);
     Serial.println("password--------");
 
-        // Release memory after usage if needed
-        // free(Site[i]);
-    //}
 
-
-
-
-
-
-    Serial.println(OutPutTimes);
-    //初始化
-    OutPutString = "";
-    OutPutTimes = 0;
-    sqlite3_close(db1);
 
 }
-void sqlAPI(){
-    sqlite3 *db1;
 
-    char *zErrMsg = 0;
-    int rc;
-
-    SPI.begin();
-    SD.begin();
-
-    sqlite3_initialize();
-
-    // Open database 1
-    if (openDb("/sd/key.db", &db1))
-        return;
-
-    rc = db_exec(db1, "SELECT * FROM key;");
-    if (rc != SQLITE_OK) {
-        sqlite3_close(db1);
-
-        return;
-    }
-    Serial.println(OutPutString);
-    OutPutString="";
-    Serial.println("All Have Data Times2:");
-    Serial.println(OutPutTimes);
-    sqlite3_close(db1);
-
-}
 void allcount(){
     File root = SD.open("/");
     int count=0;
@@ -1544,11 +1452,18 @@ void setup() {
   //  readAndPrintAllJSONFiles();
    // readJSONFile() ;
     addSiteDataToArr();
+
     list[0].select = strdup("Main");
   //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
   //  pid[0].select = strdup("main");
     // 动态分配内存以存储结构体数组
 
+    qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
+
+    // 在串口上打印按照字母顺序排序后的结果
+    for (int i = 0; i < listSize; i++) {
+        Serial.println(list[i].select);
+    }
 
     //Wire.begin(21,22,400000);
     pinMode(BTN0, INPUT_PULLUP);
