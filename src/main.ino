@@ -26,6 +26,7 @@
 #include <sstream>
 #include <vector>
 #include "SD.h"
+#include <ArduinoJson.h>
 //配置数据结构
 using namespace std;
 int OutPutTimes;
@@ -322,7 +323,7 @@ SELECT_LIST* list = NULL; // 初始化结构体数组指针
 SELECT_LIST* pid = NULL; // 初始化结构体数组指针
 
 
-uint8_t pid_num = 3;//PID选项数量
+uint8_t pid_num = 5;//PID选项数量
 
 //SELECT_LIST list[]
 //{
@@ -336,8 +337,8 @@ uint8_t pid_num = 3;//PID选项数量
 //  {"{ About }"},
 //  {"{ About }"},
 //};
-int listSize = 3;//选择界面菜单个数
-int pidSize = 7;
+int listSize = 7;//选择界面菜单个数
+int pidSize = 5;
 
 uint8_t single_line_length = 63 / listSize;
 uint8_t total_line_length = single_line_length * listSize + 1;
@@ -676,12 +677,15 @@ void pid_ui_show()//PID界面
 {
     move_bar(&pid_line_y, &pid_line_y_trg);
     move(&pid_box_y, &pid_box_y_trg);
-    move_width(&pid_box_width, &pid_box_width_trg, pid_select+1, key_msg.id);//修改pid_select加1，修复指针问题
+    move_width(&pid_box_width, &pid_box_width_trg, pid_select, key_msg.id);//修改pid_select加1，修复指针问题
     u8g2.drawVLine(126, 0, 61);
     u8g2.drawPixel(125, 0);
     u8g2.drawPixel(127, 0);
-    for (uint8_t i = 0; i < pid_num; ++i)
+    for (uint8_t i = 0; i < pidSize; ++i)
     {
+        Serial.println("-----------pidsize");
+        Serial.println(pidSize);
+        Serial.println(pid[i].select);
         u8g2.drawStr(x, 16 * i + 12, pid[i].select);  // 第一段输出位置
         u8g2.drawPixel(125, 15 * (i + 1));
         u8g2.drawPixel(127, 15 * (i + 1));
@@ -1061,6 +1065,7 @@ void select_proc(void)//选择界面处理重要的
                     default:
                         SiteIn=list[ui_select].select;
                         addUser(list[ui_select].select);
+                        pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
                         ui_state = S_DISAPPEAR;
                         ui_index = M_PID;
                         break;
@@ -1324,93 +1329,54 @@ int db_exec(sqlite3 *db, const char *sql) {
 }
 
 void addUser(char* mainnowdisplay){
-    sqlite3 *db1;
+    File jsonFile = SD.open("/data.json");
 
-    char *zErrMsg = 0;
-    int rc;
-
-    SPI.begin();
-    SD.begin();
-
-    sqlite3_initialize();
-
-    // Open database 1
-    if (openDb("/sd/key.db", &db1))
-        return;
-
-    char query[100]; // 假设足够大以容纳您的查询语句
-
-    // 构建查询语句
-    std::sprintf(query, "SELECT user FROM key WHERE site = '%s';", mainnowdisplay);
-    rc = db_exec(db1, query);
-    if (rc != SQLITE_OK) {
-        sqlite3_close(db1);
-
+    if (!jsonFile) {
+        Serial.println("无法打开 data.json 文件");
         return;
     }
-    Serial.println(OutPutString);
 
-    Serial.println("All Have Data Times:");
-    const int SiteSize = OutPutTimes;
-    char* Site[SiteSize]; // Change the array type to char*
-
-    // String OutPutString = "id = 1\nsite = example_site_2\nuser = user1\npassword = password1\nid = 2\nsite = example_site_1\nuser = user3\npassword = password1\nid = 3\nsite = example.com\nuser = john_doe\npassword = password123";
-    String inputString = OutPutString; // Declare and initialize inputString
-    int startIndex = 0;
-    int endIndex = 0;
-
-    for (int i = 0; i < OutPutTimes; i++) {
-        startIndex = inputString.indexOf("=", endIndex);
-        if (startIndex == -1) {
-            break; // If the equal sign is not found, exit the loop
-        }
-
-        endIndex = inputString.indexOf("\n", startIndex); // Find the position of the newline character
-
-        if (endIndex == -1) {
-            endIndex = inputString.length(); // If the newline character is not found, use the end of the string as the endpoint
-        }
-
-        String value = inputString.substring(startIndex + 2, endIndex); // Extract the content after the equal sign, including spaces
-
-        Serial.println(value);
-        // Convert String to char* and store in Site
-        Site[i] = strdup(value.c_str()); // Use strdup to allocate memory for the new string
-
-        // Release memory after usage if needed
-        // free(Site[i]);
+    String jsonStr;
+    while (jsonFile.available()) {
+        char c = jsonFile.read();
+        jsonStr += c;
     }
 
-    Serial.println("--------test-----------");
-    for (int i = 0; i < OutPutTimes; i++) {
-        Serial.println(Site[i]);
-    }
-    Serial.println("--------over-----------");
+    // 关闭文件
+    jsonFile.close();
 
+    // 解析JSON数据
+    DynamicJsonDocument doc(1024);
+    DeserializationError error = deserializeJson(doc, jsonStr);
+
+    if (error) {
+        Serial.println("解析JSON失败");
+        return;
+    }
+    int numx=0;
+    // 仅输出JSON键而不输出值
+    for (JsonPair keyValue : doc.as<JsonObject>()) {
+
+        numx++;
+    }
+    Serial.print("numx------------xxx: ");
+    Serial.println(numx);
+    pidSize=4;//此值自增1才可出返回设置
     pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
-
-    if (pid != NULL) {
-        // 添加值到结构体数组
-
-        // 打印数组中的值
-
-        for (int i = 0; i < pidSize; i++) {
-            pid[i].select = strdup(Site[i]); // 使用strdup创建分配的字符串副本
-        }
-        Serial.println("--------testpidarr-----------");
-        for (int i = 0; i < OutPutTimes; i++) {
-            Serial.println(pid[i].select);
-        }
-        Serial.println("--------overpidarr-----------");
-
+    int num=0;
+    // 仅输出JSON键而不输出值
+    for (JsonPair keyValue : doc.as<JsonObject>()) {
+        Serial.print("键: ");
+        Serial.println(keyValue.key().c_str());
+        pid[num].select =strdup(keyValue.key().c_str());
+        num++;
     }
 
-    Serial.println(OutPutTimes);
-    //初始化
-    OutPutString = "";
-    OutPutTimes = 0;
-    sqlite3_close(db1);
-
+    pid[3].select =strdup("keyVal");
+    pid[4].select =strdup("keyVal");
+    Serial.println( "pid[3].select");
+    Serial.println( pid[2].select);
+    Serial.println( pid[3].select);
 }
 
 void addPassword(char* mainsite,char* mainuser){
@@ -1579,8 +1545,8 @@ void setup() {
    // readJSONFile() ;
     addSiteDataToArr();
     list[0].select = strdup("Main");
-    pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
-    pid[0].select = strdup("main");
+  //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+  //  pid[0].select = strdup("main");
     // 动态分配内存以存储结构体数组
 
 
@@ -1607,7 +1573,7 @@ void setup() {
     app_y = app_y_trg = 0;
 
     box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
-    pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
+
 
     ui_index = M_LOGO;
     //ui_index=M_TEXT_EDIT;
