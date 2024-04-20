@@ -1361,7 +1361,7 @@ void addUser(char* mainnowdisplay){
     }
     Serial.print("numx------------xxx: ");
     Serial.println(numx);
-    pidSize=4;//此值自增1才可出返回设置
+    pidSize=numx+1;//此值自增1才可出返回设置
     pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
     int num=0;
     // 仅输出JSON键而不输出值
@@ -1372,8 +1372,8 @@ void addUser(char* mainnowdisplay){
         num++;
     }
 
-    pid[3].select =strdup("keyVal");
-    pid[4].select =strdup("keyVal");
+    pid[num].select =strdup("back");
+  //  pid[4].select =strdup("keyVal");
     Serial.println( "pid[3].select");
     Serial.println( pid[2].select);
     Serial.println( pid[3].select);
