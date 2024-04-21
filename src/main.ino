@@ -30,7 +30,7 @@
 //配置数据结构
 using namespace std;
 int OutPutTimes;
-
+int modelchooese=0;//0:JSON,1:TXT
 String OutPutString = "";
 int keySize;
 char* passwordIn;
@@ -249,7 +249,12 @@ float Kpid[3] = { 9.97,0.2,0.01 };//Kp,Ki,Kd
 // float Ki=0.2;
 // float Kd=0.01;
 
+#define MAX_CHARS_PER_LINE 20  // 每行最大字符数
+#define MAX_LINES_PER_PAGE 5   // 每页最大行数
 
+String textContent;
+int currentPage = 0;
+int totalLines = 0;
 uint8_t disappear_step = 1;
 
 
@@ -298,6 +303,7 @@ enum//ui_index
     M_VIDEO,//视频显示
     M_ABOUT,//关于本机
     M_IMPORT,
+    M_TXTREAD,
 };
 
 
@@ -737,6 +743,37 @@ int compare2(const void *elem1, const void *elem2) {
     return strcmp(item1->select, item2->select);
 }
 
+void drawPage(int page) {
+    u8g2.firstPage();
+    int startIdx = page * MAX_LINES_PER_PAGE;
+    int endIdx = min((page + MAX_LINES_PER_PAGE) * MAX_LINES_PER_PAGE, totalLines);
+
+    for (int i = startIdx; i < endIdx; i++) {
+
+        String line = textContent.substring(i * (MAX_CHARS_PER_LINE + 1), (i + 1) * (MAX_CHARS_PER_LINE + 1));
+        u8g2.setCursor(0, 10 + (i - startIdx) * 10);
+        u8g2.print(line);
+    }
+
+    do {
+        u8g2.nextPage();
+    } while (u8g2.nextPage());
+}
+void txtread(){
+    File file = SD.open("/hh.txt");
+    if (file) {
+        Serial.println("txt on");
+        while (file.available()) {
+            textContent += (char)file.read();
+        }
+        file.close();
+    } else {
+        Serial.println("无法打开文件");
+    }
+
+    // 计算总行数
+    Serial.println("txt connte");
+}
 /**************************界面显示*******************************/
 
 void logo_ui_show()//显示logo
@@ -1095,11 +1132,14 @@ void pid_proc()//pid界面处理函数
                     pid_box_y = pid_box_y_trg = 0;
                     pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;
                 }
-                else
-                {
-                    UserIn=pid[pid_select].select;
-                    addPassword(SiteIn,UserIn);
-                    ui_index = M_ABOUT;
+                else {
+
+                        //json
+                        Serial.println("json in");
+                        UserIn = pid[pid_select].select;
+                        addPassword(SiteIn, UserIn);
+                        ui_index = M_ABOUT;
+
                 }
                 break;
             default:
@@ -1182,16 +1222,46 @@ void select_proc(void)//选择界面处理重要的
 //                        ui_state = S_DISAPPEAR;
 //                        ui_index = M_ABOUT;
 //                        break;
-                    default:
-                        SiteIn=list[ui_select].select;
-                       // if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
+                    default: {
+                        Serial.println(modelchooese);
+                        if (modelchooese == 0) {
+                            SiteIn = list[ui_select].select;
+                            // if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
                             addUser(list[ui_select].select);
-                       //     justonece+=1;
-                     //   }
-                        pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_PID;
-                        break;
+                            //     justonece+=1;
+                            //   }
+                            pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_PID;
+                            break;
+                        } else {
+
+                            //txt
+                            ui_state = S_DISAPPEAR;
+                            File file = SD.open("/hh.txt");
+                            if (file) {
+                                Serial.println("txt on");
+                                while (file.available()) {
+                                    textContent += (char)file.read();
+                                }
+                                file.close();
+                            } else {
+                                Serial.println("无法打开文件");
+                            }
+
+                            // 计算总行数
+                            totalLines = textContent.length() / (MAX_CHARS_PER_LINE + 1);  // 假设每行除了字符外还有换行符
+                            if (textContent.length() % (MAX_CHARS_PER_LINE + 1) != 0) {
+                                totalLines++;
+                            }
+                            Serial.println("txt connte");
+                            Serial.println("txt in");
+
+                            ui_index = M_TXTREAD;
+
+                            break;
+                        }
+                    }
                 }
                 //Serial.println("Btn2");
             default:
@@ -1204,8 +1274,8 @@ void select_proc(void)//选择界面处理重要的
     }
     select_ui_show();
 }
-void allcount(int modelchooese);
-void addSiteDataToArr(int modelchooese);
+void allcount();
+void addSiteDataToArr();
 void icon_proc(void)//icon界面处理
 {
     icon_ui_show();
@@ -1239,8 +1309,9 @@ void icon_proc(void)//icon界面处理
                         ui_index = M_LOGO;
                         break;
                     case 1: {
-                        allcount(0);
-                        addSiteDataToArr(0);
+                        modelchooese=0;
+                        allcount();
+                        addSiteDataToArr();
                         list[0].select = strdup("Main");
 
                         box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
@@ -1263,8 +1334,9 @@ void icon_proc(void)//icon界面处理
                     case 2:
 //                        ui_state = S_DISAPPEAR;
 //                        ui_index = M_IMPORT;
-                        allcount(1);
-                        addSiteDataToArr(1);
+                        modelchooese=1;
+                        allcount();
+                        addSiteDataToArr();
                         list[0].select = strdup("Main");
 
                         box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
@@ -1422,6 +1494,38 @@ void import_proc()//about界面处理函数
 
 
 }
+void txtred_proc(){
+
+    if (currentPage >= totalLines / MAX_LINES_PER_PAGE) {
+        currentPage = 0;
+    }
+    Serial.println("txt wait");
+    drawPage(currentPage * MAX_LINES_PER_PAGE);
+    Serial.print("当前页码: ");
+    Serial.println(currentPage);
+   // delay(200);
+
+    if (key_msg.pressed)
+    {
+        key_msg.pressed = false;
+        switch (key_msg.id)
+        {
+            case 2: {
+                currentPage++;
+                //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+            }
+            default:
+                ui_state = S_DISAPPEAR;
+                ui_index = M_SELECT;
+                totalLines=0;
+                textContent="";
+
+                break;
+
+        }
+    }
+
+}
 /********************************总的UI显示************************************/
 
 void ui_proc()//总的UI进程
@@ -1460,6 +1564,8 @@ void ui_proc()//总的UI进程
                 case M_IMPORT:
                     import_proc();
                 break;
+                case M_TXTREAD:
+                    txtred_proc();
                 default:
                     break;
             }
@@ -1589,7 +1695,7 @@ void addPassword(char* mainsite,char* mainuser){
 
 }
 
-void allcount(int modelchooese){
+void allcount(){
     char* model=".json";
     if(modelchooese==0){
         model=".json";
@@ -1619,7 +1725,7 @@ void allcount(int modelchooese){
     root.close();
    listSize=count+1;
 }
-void addSiteDataToArr(int modelchooese) {//此函数提供方法使其全部网站保存在数组中，界面分类用
+void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数组中，界面分类用
     free(list);
     list = NULL;
     char* model=".json";
@@ -1695,7 +1801,7 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
     icon_x = icon_x_trg = 0;
     app_y = app_y_trg = 0;
 
-
+    u8g2.setFont(u8g2_font_ncenB08_tr);
     ui_index = M_LOGO;
     //ui_index=M_TEXT_EDIT;
     ui_state = S_NONE;
