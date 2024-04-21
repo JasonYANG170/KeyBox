@@ -722,7 +722,20 @@ void disappear()
     disappear_step++;
 }
 
+int compare(const void *a, const void *b) {
+    return strcmp(((SELECT_LIST*)a)->select, ((SELECT_LIST*)b)->select);
+}
+int compare2(const void *elem1, const void *elem2) {
+    SELECT_LIST* item1 = (SELECT_LIST*)elem1;
+    SELECT_LIST* item2 = (SELECT_LIST*)elem2;
 
+    // 判断如果元素为最后一个元素，则不进行排序
+    if (item1 == &pid[pidSize-1] || item2 == &pid[pidSize-1]) {
+        return 0; // 返回0表示两个元素相等
+    }
+
+    return strcmp(item1->select, item2->select);
+}
 
 /**************************界面显示*******************************/
 
@@ -1191,7 +1204,8 @@ void select_proc(void)//选择界面处理重要的
     }
     select_ui_show();
 }
-
+void allcount(int modelchooese);
+void addSiteDataToArr(int modelchooese);
 void icon_proc(void)//icon界面处理
 {
     icon_ui_show();
@@ -1224,11 +1238,49 @@ void icon_proc(void)//icon界面处理
                     case 0: ui_state = S_DISAPPEAR;
                         ui_index = M_LOGO;
                         break;
-                    case 1:ui_state = S_DISAPPEAR;
+                    case 1: {
+                        allcount(0);
+                        addSiteDataToArr(0);
+                        list[0].select = strdup("Main");
+
+                        box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
+
+                        //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+                        //  pid[0].select = strdup("main");
+                        // 动态分配内存以存储结构体数组
+
+                        qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
+
+                        // 在串口上打印按照字母顺序排序后的结果
+                        for (int i = 0; i < listSize; i++) {
+                            Serial.println(list[i].select);
+                        }
+                        ui_state = S_DISAPPEAR;
                         ui_index = M_SELECT;
+
                         break;
-                    case 2:ui_state = S_DISAPPEAR;
-                        ui_index = M_IMPORT;
+                    }
+                    case 2:
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_IMPORT;
+                        allcount(1);
+                        addSiteDataToArr(1);
+                        list[0].select = strdup("Main");
+
+                        box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
+
+                        //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+                        //  pid[0].select = strdup("main");
+                        // 动态分配内存以存储结构体数组
+
+                        qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
+
+                        // 在串口上打印按照字母顺序排序后的结果
+                        for (int i = 0; i < listSize; i++) {
+                            Serial.println(list[i].select);
+                        }
+                        ui_state = S_DISAPPEAR;
+                        ui_index = M_SELECT;
 
                         break;
                 }
@@ -1423,20 +1475,7 @@ void ui_proc()//总的UI进程
 
 
 // 比较函数，用于对字符串进行排序
-int compare(const void *a, const void *b) {
-    return strcmp(((SELECT_LIST*)a)->select, ((SELECT_LIST*)b)->select);
-}
-int compare2(const void *elem1, const void *elem2) {
-    SELECT_LIST* item1 = (SELECT_LIST*)elem1;
-    SELECT_LIST* item2 = (SELECT_LIST*)elem2;
 
-    // 判断如果元素为最后一个元素，则不进行排序
-    if (item1 == &pid[pidSize-1] || item2 == &pid[pidSize-1]) {
-        return 0; // 返回0表示两个元素相等
-    }
-
-    return strcmp(item1->select, item2->select);
-}
 
 void addUser(char* mainnowdisplay){
     free(pid);
@@ -1550,7 +1589,14 @@ void addPassword(char* mainsite,char* mainuser){
 
 }
 
-void allcount(){
+void allcount(int modelchooese){
+    char* model=".json";
+    if(modelchooese==0){
+        model=".json";
+    }else{
+        model=".txt";
+    }
+
     File root = SD.open("/");
     int count=0;
     while (true) {
@@ -1562,7 +1608,7 @@ void allcount(){
 
         if (!entry.isDirectory() && entry.name()[0] != '.') {
             String filename = entry.name();
-            if (filename.endsWith(".json")) {
+            if (filename.endsWith( model)) {
                 count++;
             }
         }
@@ -1573,7 +1619,16 @@ void allcount(){
     root.close();
    listSize=count+1;
 }
-void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数组中，界面分类用
+void addSiteDataToArr(int modelchooese) {//此函数提供方法使其全部网站保存在数组中，界面分类用
+    free(list);
+    list = NULL;
+    char* model=".json";
+    if(modelchooese==0){
+        model=".json";
+    }else{
+       model=".txt";
+    }
+    Serial.println(model);
     Serial.println("read JSON Start:");
     File root = SD.open("/");
     int index = 0; // 用于追踪数组中的索引位置
@@ -1583,12 +1638,14 @@ void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数�
         File entry = root.openNextFile();
         if (!entry) {
             // 没有更多文件
+            Serial.println("entry");
             break;
         }
 
         if (!entry.isDirectory() && entry.name()[0] != '.') {
             const char* filename = entry.name();
-            if (strstr(filename, ".json") != NULL) {
+            if (strstr(filename,  model) != NULL) {
+                Serial.println(filename);
                 list[index+1].select = strdup(filename);
                 index++;
             }
@@ -1606,26 +1663,15 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
         Serial.println("SD 卡初始化失败！");
         return;
     }
-    allcount();
+
     // 写入数据到 data.json 文件
    // writeJSONToFile();
 
     // 读取并打印 SD 卡上的所有 JSON 文件
   //  readAndPrintAllJSONFiles();
    // readJSONFile() ;
-    addSiteDataToArr();
 
-    list[0].select = strdup("Main");
-  //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
-  //  pid[0].select = strdup("main");
-    // 动态分配内存以存储结构体数组
 
-    qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
-
-    // 在串口上打印按照字母顺序排序后的结果
-    for (int i = 0; i < listSize; i++) {
-        Serial.println(list[i].select);
-    }
 
     //Wire.begin(21,22,400000);
     pinMode(BTN0, INPUT_PULLUP);
@@ -1648,8 +1694,6 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
     ui_select = pid_select = icon_select = 0;
     icon_x = icon_x_trg = 0;
     app_y = app_y_trg = 0;
-
-    box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
 
 
     ui_index = M_LOGO;
