@@ -1319,7 +1319,7 @@ void setting(int select){
             break;
         case 3:
            // ui_state = S_DISAPPEAR;
-            u8g2.drawStr(2,12,"Not Find New DATA");
+            u8g2.drawStr(2,12,"Not Find New DATA !");
           //  u8g2.drawStr(2,28,"FLASH    :            4MB");
             u8g2.drawStr(2,44,"Press any key go back");
            // u8g2.drawStr(2,60,"Firmware :          V3.0");
