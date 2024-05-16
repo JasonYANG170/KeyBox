@@ -1310,9 +1310,9 @@ void setting(int select){
             pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
             pid[0].select =strdup("1min");
             pid[1].select =strdup("5min");
-            pid[2].select =strdup("10min");
-            pid[3].select =strdup("Never");
-            pid[4].select =strdup("back");
+           // pid[2].select =strdup("10min");//未知，缺少size函数
+            pid[2].select =strdup("Never");
+            pid[2].select =strdup("back");
             pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
             ui_state = S_DISAPPEAR;
             ui_index = M_PID;
