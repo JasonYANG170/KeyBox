@@ -2,6 +2,6 @@
 <project version="4">
   <component name="Arduino Project Settings">
     <option name="baudRate" value="115200" />
-    <option name="port" value="COM30" />
+    <option name="port" value="COM12" />
   </component>
 </project>
