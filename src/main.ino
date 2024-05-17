@@ -272,7 +272,8 @@ enum//ui_index
     M_IMPORT,
     M_TXTREAD,
     M_ABOUTDEV,
-    M_SET
+    M_SET,
+    M_BLACK
 };
 
 
@@ -331,6 +332,7 @@ SELECT_LIST icon[]
 //设备名称
 char  name[] = "";
 String Passwordis="";
+int display_time=0;
 //允许名字的最大长度
 const uint8_t name_len = 6;//0-11for name  12 for return
 char  title[] = "Password";
@@ -814,9 +816,9 @@ void pid_ui_show()//PID界面
     u8g2.drawPixel(127, 0);
     for (uint8_t i = 0; i < pidSize; ++i)
     {
-        Serial.println("-----------pidsize");
-        Serial.println(pidSize);
-        Serial.println(pid[i].select);
+       // Serial.println("-----------pidsize");
+       // Serial.println(pidSize);
+        //Serial.println(pid[i].select);
         u8g2.drawStr(x, 16 * i + 12, pid[i].select);  // 第一段输出位置
         u8g2.drawPixel(125, 15 * (i + 1));
         u8g2.drawPixel(127, 15 * (i + 1));
@@ -1143,7 +1145,7 @@ void pid_proc()//pid界面处理函数
                     pid_box_y = pid_box_y_trg = 0;
                     pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;
                 }
-                else {
+                else if(modelchooese==0){
 
                     //json
                     Serial.println("json in");
@@ -1151,6 +1153,26 @@ void pid_proc()//pid界面处理函数
                     addPassword(SiteIn, UserIn);
                     ui_index = M_ABOUT;
 
+                }else{
+                    Serial.println("at seting--------------------------------------------!!!!!!!!!!!!!!");
+                    Serial.println(pid_select);
+                    switch (pid_select) {
+                        case 0:
+                            display_time=60000;
+                            ui_index = M_SELECT;
+                            ui_state = S_DISAPPEAR;
+                            break;
+                        case 1:
+                            display_time=300000;
+                            ui_index = M_SELECT;
+                            ui_state = S_DISAPPEAR;
+                            break;
+                        case 2:
+                            display_time=0;
+                            ui_index = M_SELECT;
+                            ui_state = S_DISAPPEAR;
+                            break;
+                    }
                 }
                 break;
             default:
@@ -1303,7 +1325,7 @@ void setting(int select){
         case 2:
             free(pid);
             pid = NULL;
-            pidSize=5;//此值自增1才可出返回设置
+            pidSize=4;//此值自增1才可出返回设置
 
 
 
@@ -1312,7 +1334,7 @@ void setting(int select){
             pid[1].select =strdup("5min");
            // pid[2].select =strdup("10min");//未知，缺少size函数
             pid[2].select =strdup("Never");
-            pid[2].select =strdup("back");
+            pid[3].select =strdup("Back");
             pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
             ui_state = S_DISAPPEAR;
             ui_index = M_PID;
@@ -1349,6 +1371,28 @@ void set_proc(){
             default:
                 ui_state = S_DISAPPEAR;
                 ui_index = M_SELECT;
+
+                break;
+
+        }
+    }
+
+}
+void black_proc(){
+   // setting(ui_select);
+   // Serial.println("txgog11111111111111ogote");
+    if (key_msg.pressed)
+    {
+        key_msg.pressed = false;
+        switch (key_msg.id)
+        {
+            case 2: {
+
+                //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+            }
+            default:
+                ui_state = S_DISAPPEAR;
+                ui_index = M_LOGO;
 
                 break;
 
@@ -1740,6 +1784,9 @@ void ui_proc()//总的UI进程
                 case M_SET:
                     set_proc();
                     break;
+                case M_BLACK:
+                    black_proc();
+                    break;
                 default:
                     break;
             }
@@ -1994,9 +2041,39 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
     ui_state = S_NONE;
     Serial.println("entry2");
 }
-
+unsigned long previousMillis = 0;
+//const long interval = 60000; // 5 minutes in milliseconds
 void loop() {
-    Serial.println("entry3");
+  //  Serial.println("entry3");
+    unsigned long currentMillis = millis();
+if(display_time!=0) {
+    if (currentMillis - previousMillis >= display_time) {
+        // 在这里执行您想要每隔5分钟执行的任务
+        // 例如，您可以添加要执行的代码块或调用函数
+
+        ui_state = S_DISAPPEAR;
+        setting(ui_select);
+        Serial.println("txgog11111111111111ogote");
+        if (key_msg.pressed) {
+            key_msg.pressed = false;
+            switch (key_msg.id) {
+                case 2: {
+
+                    //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+                }
+                default:
+                    previousMillis = currentMillis;
+                    ui_state = S_DISAPPEAR;
+                    ui_index = M_SELECT;
+
+                    break;
+
+            }
+        }
+        // 更新上一次执行任务的时间戳
+
+    }
+}
     key_scan();
     ui_proc();
 }
