@@ -1,15 +1,14 @@
 <div align="center">
     <h1>Keybox电子钥匙</h1>
     <img src="https://img.shields.io/github/license/JasonYANG170/KeyBox?label=License&style=for-the-badge">
-    <img src="https://img.shields.io/github/commit-activity/w/JasonYANG170KeyBox?style=for-the-badge">
-<img src="https://img.shields.io/github/languages/count/JasonYANG170/KeyBox?logo=python&style=for-the-badge">
+    <img src="https://img.shields.io/github/commit-activity/w/JasonYANG170/KeyBox?style=for-the-badge">
+<img src="https://img.shields.io/github/languages/count/JasonYANG170/KeyBox?logo=c&style=for-the-badge">
 	<br>
     	<a href="https://discord.com/invite/az3ceRmgVe"><img alt="Discord" src="https://img.shields.io/discord/978108215499816980?style=social&logo=discord&label=echosec"></a>
   <br>
  <img src="https://github.com/JasonYANG170/KeyBox/assets/39414350/be60f9aa-8254-4ff5-99e1-27b5d7f49282">
 <br>
-这是一项基于Python语言的班级魔方GPS自动签到Script
-
+这是一项基于C语言的电子密钥存储器
 <br>
 
 </div>
