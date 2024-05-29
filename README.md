@@ -13,7 +13,8 @@
 
 </div>
 
-
+## 演示视频
+[哔哩哔哩](https://www.bilibili.com/video/BV1NATFeLE5D/)
 ## 功能
 - ✅支持从浏览器导入网站密钥
 - ✅支持 TOTP 2FA实时验证码绑定
