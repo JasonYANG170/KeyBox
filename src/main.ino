@@ -15,22 +15,36 @@
      *  DAT0       MISO (D19)
      *  DAT1       -
 */
-#include <stdio.h>
-#include <stdlib.h>
-
+#include "TOTP++.h"
+#include <NTPClient.h>
+#include <WiFi.h>
+#include <WiFiUdp.h>
 #include <SPI.h>
-#include <FS.h>
-#include <iostream>
-#include <sstream>
-#include <string>
-#include <sstream>
-#include <vector>
 #include "SD.h"
 #include <ArduinoJson.h>
-//配置数据结构
+#include <BleKeyboard.h>
+
+BleKeyboard bleKeyboard;
+
 using namespace std;
+
+// WiFi credentials
+const char *ssid = "Hello-World 2.4G";
+const char *password = "Qwe200477";
+//const long utcOffsetInSeconds = 3600;//用于NTPClient timeClient，看定义
+
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "pool.ntp.org");
+
+
+
+// TOTP CONFIG
+
+
+
+
 int OutPutTimes;
-int modelchooese=0;//0:JSON,1:TXT,2:SET
+int modelchooese=0;//0:JSON,1:TXT,2:SET,3.TOTp,4.Displaytime,5.Back Light，6.BLE MODE
 String OutPutString = "";
 int keySize;
 char* passwordIn;
@@ -67,78 +81,38 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2(U8G2_R0, /* clock=*/ 9, /* data=*/ 8);  
 PROGMEM const uint8_t icon_pic[][200]
         {
                 {
-                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x00,0x00,0x00,
-                        0x00,0x0F,0x00,0x00,0x00,0x80,0x1F,0x00,0x00,0x00,0xC0,0x3F,0x00,0x00,0x00,0xC0,
-                        0x3F,0x00,0x00,0x00,0xE0,0x7F,0x00,0x00,0x00,0xF0,0xFF,0x00,0x00,0x00,0xF8,0xFF,
-                        0x01,0x00,0x00,0xFC,0xFF,0x03,0x00,0x00,0xFC,0xFF,0x03,0x00,0x00,0xFE,0xFF,0x07,
-                        0x00,0x00,0xFF,0xFF,0x0F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,0xFF,0xFF,0x1F,0x00,
-                        0x00,0x00,0x00,0x00,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,
-                        0xFF,0xFF,0x1F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,0x1F,
-                        0x80,0x1F,0x00,0x80,0x1F,0x80,0x1F,0x00,0x80,0x1F,0x80,0x1F,0x00,0x80,0x1F,0x80,
-                        0x1F,0x00,0x80,0x1F,0xB0,0x1F,0x00,0x80,0x1F,0xB0,0x1F,0x00,0x80,0x1F,0x80,0x1F,
-                        0x00,0x80,0x1F,0x80,0x1F,0x00,0x80,0x1F,0x80,0x1F,0x00,0x80,0x1F,0x80,0x1F,0x00,
-                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                        0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\home.bmp",0*/
+
+                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x00,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0xE0,0x79,0x00,0x00,0x00,0x70,0xE0,0x00,0x00,0x00,0x38,0xC0,0x03,0x00,0x00,0x1E,0x80,0x07,0x00,0x00,0x0F,0x00,0x0E,0x00,0x80,0x03,0x00,0x1C,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0xC0,0x3F,0x30,0x00,0xC0,0xC0,0x3F,0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xC0,0x30,
+                        0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xC0,0x30,0x30,0x00,0xC0,0xFF,0xF0,0x3F,0x00,0x80,0xFF,0xF0,0x3F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\home_40dp_FILL0_wght400_GRAD0_opsz40.bmp",0*/
                 },
                 {
-                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,
-                        0x00,0x0F,0x00,0x00,0x00,0x00,0xFF,0x3F,0x00,0x00,0x00,0xFF,0x3F,0x00,0x00,0x00,
-                        0xFF,0x3F,0x00,0x00,0x00,0xFF,0x3F,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0x00,0x0F,
-                        0x00,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0x00,0x0F,0x00,
-                        0x00,0x00,0x00,0x0F,0x00,0x00,0x00,0xE0,0x7F,0x00,0x00,0x00,0xF8,0xFF,0x01,0x00,
-                        0x00,0xFC,0xFF,0x03,0x00,0x00,0xFE,0xFF,0x07,0x00,0x00,0xFF,0xFF,0x0F,0x00,0x00,
-                        0xFF,0xFF,0x0F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x80,0x7F,0xE0,0x1F,0x00,0x80,0x3F,
-                        0xC0,0x1F,0x00,0x80,0x3F,0xC0,0x1F,0x00,0x80,0x3F,0xC0,0x1F,0x00,0x80,0x3F,0xC0,
-                        0x1F,0x00,0x80,0x3F,0xC0,0x1F,0x00,0x80,0x7F,0xE0,0x1F,0x00,0x80,0xFF,0xFF,0x1F,
-                        0x00,0x00,0xFF,0xFF,0x0F,0x00,0x00,0xFF,0xFF,0x0F,0x00,0x00,0xFE,0xFF,0x07,0x00,
-                        0x00,0xFC,0xFF,0x03,0x00,0x00,0xF8,0xFF,0x01,0x00,0x00,0xE0,0x7F,0x00,0x00,0x00,
-                        0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\key.bmp",0*/
+                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0E,0x00,0x00,0x00,0x80,0x7F,0x00,0x00,0x00,0xE0,0xE0,0x00,0x00,0x00,0x70,0xC0,0x01,0x00,0x00,0x38,0x00,0x03,0x00,0x00,0x18,0x00,0xFF,0xFF,0x00,0x0C,0x00,0xFE,0xFF,0x01,0x0C,0x0E,0x00,0x80,0x03,0x0C,0x1F,0x00,0x00,0x07,0x0C,0x1F,0x00,0x00,0x0E,0x0C,0x0E,0x00,0x04,0x07,0x0C,0x00,0x3E,0x8E,0x01,0x18,0x00,0x7F,0xFF,0x00,0x18,0x00,0xE3,0x71,0x00,0x70,0x80,0x81,0x20,0x00,0xE0,0xE0,0x00,0x00,0x00,0xC0,0x7F,0x00,
+                        0x00,0x00,0x00,0x1E,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\key_40dp_FILL0_wght400_GRAD0_opsz40 (1).bmp",0*/
 
                         /* (36 X 37 )*/
                 },
                 {
-                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                        0x00,0x00,0x00,0x00,0xE0,0xFF,0xFF,0xFF,0x00,0xE0,0xFF,0xFF,0xFF,0x00,0xE0,0xFF,
-                        0xFF,0xFF,0x00,0xE0,0xFF,0xFF,0xFF,0x00,0xE0,0xFF,0xFF,0xFF,0x00,0xE0,0xFF,0xFF,
-                        0xFF,0x00,0xE0,0xFF,0xFF,0xFF,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,
-                        0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,
-                        0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,
-                        0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,
-                        0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,
-                        0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,
-                        0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,
-                        0x00,0x80,0x3F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                        0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\home.bmp",0*/
+                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x1F,0x00,0x00,0x00,0xE0,0x79,0x00,0x00,0x00,0x7C,0xE0,0x03,0x00,0x80,0x0F,0x00,0x1F,0x00,0x80,0x03,0x00,0x38,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x0F,0x30,0x00,0xC0,0x00,0x0F,0x30,0x00,0xC0,0x00,0x0F,0x30,0x00,0xC0,0x00,0x0F,0x30,0x00,0xC0,0x00,0x06,0x30,0x00,0xC0,0x00,0x06,0x30,0x00,0xC0,0x01,0x06,0x30,0x00,0x80,0x01,0x06,0x38,0x00,0x80,0x01,0x0E,0x18,0x00,0x00,0x01,0x00,0x18,0x00,0x00,0x03,0x00,0x0C,0x00,0x00,0x03,0x00,0x0C,0x00,0x00,0x06,0x00,
+                        0x06,0x00,0x00,0x0C,0x00,0x07,0x00,0x00,0x1C,0x00,0x03,0x00,0x00,0x38,0xC0,0x01,0x00,0x00,0x70,0xE0,0x00,0x00,0x00,0xC0,0x79,0x00,0x00,0x00,0x80,0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\encrypted_40dp_FILL0_wght400_GRAD0_opsz40.bmp",0*/
+
+                },
+
+                {
+
+                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xFF,0x1F,0x00,0x00,0x80,0xFF,0x7F,0x00,0x00,0xC0,0x00,0xE0,0x00,0x00,0xC0,0x00,0xE0,0x00,0x00,0xC0,0x00,0xE0,0x01,0x00,0xC0,0x00,0xE0,0x07,0x00,0xC0,0x00,0xE0,0x0F,0x00,0xC0,0x00,0xE0,0x1F,0x00,0xC0,0x00,0xE0,0x1F,0x00,0xC0,0x00,0x20,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0xE0,0x7F,0x30,0x00,0xC0,0xF0,0xFF,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0xF0,0xFF,
+                        0x30,0x00,0xC0,0xE0,0x7E,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0xC0,0x00,0x00,0x30,0x00,0x80,0xFF,0xFF,0x3F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\description_40dp_FILL0_wght400_GRAD0_opsz40.bmp",0*/
+
 
                 },
                 {
-                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                                                                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                        0x00,0x0C,0x00,0x00,0x00,0x00,0x1C,0x00,
-                                                                0x00,0x00,0x00,0x3C,0x00,0x00,0x00,0x00,
-                        0xFC,0x00,0x00,0x00,0x00,0xFC,0x01,0x00,
-                                                                0x00,0x00,0xFC,0x03,0x00,0x00,0x00,0xFC,
-                        0x07,0x00,0x00,0x00,0xFC,0x0F,0x00,0x00,
-                                                                0x00,0xFE,0x1F,0x00,0x00,0xF8,0xFF,0x3F,
-                        0x00,0x00,0xFF,0xFF,0xFF,0x00,0xC0,0xFF,
-                                                                0xFF,0xFF,0x01,0xE0,0xFF,0xFF,0xFF,0x03,
-                        0xF0,0xFF,0xFF,0xFF,0x07,0xF0,0xFF,0xFF,
-                                                                0xFF,0x0F,0xF8,0xFF,0xFF,0xFF,0x0F,0xFC,
-                        0xFF,0xFF,0xFF,0x07,0xFC,0xFF,0xFF,0xFF,
-                                                                0x03,0xFE,0xFF,0xFF,0xFF,0x01,0xFE,0xFF,
-                        0xFF,0xFF,0x00,0xFF,0x03,0xFE,0x3F,0x00,
-                                                                0xFF,0x00,0xFC,0x1F,0x00,0x3F,0x00,0xFC,
-                        0x0F,0x00,0x1F,0x00,0xFC,0x07,0x00,0x07,
-                                                                0x00,0xFC,0x03,0x00,0x03,0x00,0xFC,0x01,
-                        0x00,0x01,0x00,0xFC,0x00,0x00,0x00,0x00,
-                                                                0x3C,0x00,0x00,0x00,0x00,0x1C,0x00,0x00,
-                        0x00,0x00,0x0C,0x00,0x00,0x00,0x00,0x00,
-                                                                0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-                        0x00,0x00,0x00,0x00,/*"C:\Users\13944\Desktop\fenxiang.bmp",0*/
+                        0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1F,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x30,0x00,0x00,0x00,0xC0,0x30,0x00,0x00,0x00,0xC0,0x30,0x00,0x00,0x80,0xE1,0x70,0x30,0x00,0xC0,0x77,0xE0,0x3F,0x00,0x60,0x1E,0x80,0x67,0x00,0x60,0x08,0x00,0x61,0x00,0x30,0x00,0x00,0xC0,0x00,0x30,0x00,0x06,0xC0,0x00,0xE0,0x80,0x1F,0xE0,0x00,0xC0,0xC1,0x3F,0x38,0x00,0x80,0xC1,0x7F,0x18,0x00,0x80,0xC1,0x7F,0x18,0x00,0x80,0xE1,0x7F,0x18,0x00,0x80,0xC1,0x7F,0x18,0x00,0xC0,0xC1,0x3F,0x38,0x00,0xE0,0x80,0x1F,0x70,0x00,0x30,0x00,0x0F,0xC0,0x00,0x30,0x00,0x00,0xC0,0x00,0x60,0x00,0x00,0xE0,0x00,0x60,0x1E,0x80,
+                        0x67,0x00,0xC0,0x7F,0xE0,0x3F,0x00,0xC0,0xE1,0xF0,0x38,0x00,0x00,0xC0,0x30,0x00,0x00,0x00,0xC0,0x30,0x00,0x00,0x00,0x80,0x30,0x00,0x00,0x00,0x80,0x3F,0x00,0x00,0x00,0x80,0x1F,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\settings_40dp_FILL0_wght400_GRAD0_opsz40.bmp",0*/
                 },
+                {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x80,0x1F,0x00,0x00,0x00,0xC0,0x3F,0x00,0x00,0x00,0xF0,0xF0,0x00,0x00,0x00,0x70,0xE0,0x00,0x00,0x00,0x38,0xC0,0x01,0x00,0x00,0x18,0x80,0x01,0x00,0x00,0x18,0x80,0x01,0x00,0x00,0x18,0x80,0x01,0x00,0x00,0x18,0x80,0x01,0x00,0x00,0x18,0x80,0x01,0x00,0x00,0xFE,0xFF,0x07,0x00,0x80,0xFF,0xFF,0x1F,0x00,0xC0,0xFF,0xFF,0x3F,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x0F,0x38,0x00,0xC0,0x81,0x1F,0x38,0x00,0xC0,0x81,0x1F,0x38,0x00,0xC0,0x81,0x1F,0x38,0x00,0xC0,0x01,0x0F,0x38,0x00,0xC0,0x01,0x00,
+                        0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0x01,0x00,0x38,0x00,0xC0,0xFF,0xFF,0x3F,0x00,0x80,0xFF,0xFF,0x1F,0x00,0x00,0xFE,0xFF,0x07,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,/*"C:\Users\qw200\Desktop\lock_24dp_FILL0_wght400_GRAD0_opsz24.bmp",0*/},
         };
 
-uint8_t icon_width[] = { 36,36,36,36 };
+uint8_t icon_width[] = { 36,36,36,36,36 ,36};
 
 //main界面图片
 PROGMEM const uint8_t LOGO[] =
@@ -219,9 +193,16 @@ float Kpid[3] = { 9.97,0.2,0.01 };//Kp,Ki,Kd
 #define MAX_CHARS_PER_LINE 20  // 每行最大字符数
 #define MAX_LINES_PER_PAGE 5   // 每页最大行数
 
+#define BUTTON_PIN 1
+#define DISPLAY_ROWS 6
+#define CHARACTERS_PER_LINE 22
+
+//U8G2_SH1106_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);
+
+
 String textContent;
 int currentPage = 0;
-int totalLines = 0;
+int totalPages = 0;
 uint8_t disappear_step = 1;
 
 
@@ -243,7 +224,9 @@ int16_t box_y, box_y_trg;//框的当前值和目标值
 int8_t ui_select;//当前选中那一栏
 
 //pid界面变量
-//int8_t pid_y,pid_y_trg;
+//pid界面变量
+int8_t pid_x;
+int16_t pid_y,pid_y_trg;
 uint8_t pid_line_y, pid_line_y_trg;//线的位置
 uint8_t pid_box_width, pid_box_width_trg;//框的宽度
 int16_t pid_box_y, pid_box_y_trg;//框的当前值和目标值
@@ -269,10 +252,12 @@ enum//ui_index
     M_TEXT_EDIT,//文字编辑
     M_VIDEO,//视频显示
     M_ABOUT,//关于本机
+    M_ABOUT_pass,
     M_IMPORT,
     M_TXTREAD,
     M_ABOUTDEV,
     M_SET,
+    M_TOTF,
     M_BLACK
 };
 
@@ -300,7 +285,7 @@ SELECT_LIST* list = NULL; // (主要的菜单结构，用于展示站点和文�
 SELECT_LIST* pid = NULL; // (二级菜单结构，用于展示站点的多个用户)初始化结构体数组指针
 
 
-uint8_t pid_num = 5;//PID选项数量
+
 
 //SELECT_LIST list[]
 //{
@@ -315,15 +300,17 @@ uint8_t pid_num = 5;//PID选项数量
 //  {"{ About }"},
 //};
 int listSize = 7;//选择界面菜单个数
-int pidSize = 5;
-
+int pidSize = 6;
+uint8_t pid_single_line_length = 63 /pidSize;
+uint8_t pid_total_line_length = pid_single_line_length * pidSize + 1;
 uint8_t single_line_length = 63 / listSize;
 uint8_t total_line_length = single_line_length * listSize + 1;
 
 SELECT_LIST icon[]
         {
                 {"HOME"},
-                {"Authenticator"},
+                {"WEB KEY"},
+                {"2FA KEY"},
                 {"TXT"},
                 {"SET"},
                 {"LOCK"},
@@ -331,7 +318,7 @@ SELECT_LIST icon[]
 
 //设备名称
 char  name[] = "";
-String Passwordis="";
+char Passwordis[]="";
 int display_time=0;
 //允许名字的最大长度
 const uint8_t name_len = 6;//0-11for name  12 for return
@@ -440,7 +427,7 @@ void writeCSV(){
         Serial.println(key);
         Serial.println(value);
         Serial.println("----------------------------------");
-        String fileName = ip + ".json";
+        String fileName = ip + ".web";
 
         if (SD.exists("/" + fileName)) {
             // 文件已存在，更新JSON文件中的键值对
@@ -723,35 +710,20 @@ int compare2(const void *elem1, const void *elem2) {
 
 void drawPage(int page) {
     u8g2.firstPage();
-    int startIdx = page * MAX_LINES_PER_PAGE;
-    int endIdx = min((page + MAX_LINES_PER_PAGE) * MAX_LINES_PER_PAGE, totalLines);
-
-    for (int i = startIdx; i < endIdx; i++) {
-
-        String line = textContent.substring(i * (MAX_CHARS_PER_LINE + 1), (i + 1) * (MAX_CHARS_PER_LINE + 1));
-        u8g2.setCursor(0, 10 + (i - startIdx) * 10);
-        u8g2.print(line);
-    }
-
     do {
-        u8g2.nextPage();
+        u8g2.setFont(u8g2_font_ncenB08_tr);
+        for (int i = 0; i < DISPLAY_ROWS; i++) {
+            int startIdx = page * DISPLAY_ROWS * CHARACTERS_PER_LINE + i * CHARACTERS_PER_LINE;
+            int endIdx = startIdx + CHARACTERS_PER_LINE;
+            if (endIdx > textContent.length()) endIdx = textContent.length();
+            if (startIdx < textContent.length()) {
+                u8g2.setCursor(0, 10 + i * 10);
+                u8g2.print(textContent.substring(startIdx, endIdx));
+            }
+        }
     } while (u8g2.nextPage());
 }
-void txtread(){
-    File file = SD.open("/hh.txt");
-    if (file) {
-        Serial.println("txt on");
-        while (file.available()) {
-            textContent += (char)file.read();
-        }
-        file.close();
-    } else {
-        Serial.println("无法打开文件");
-    }
 
-    // 计算总行数
-    Serial.println("txt connte");
-}
 /**************************界面显示*******************************/
 
 void logo_ui_show()//显示logo
@@ -809,26 +781,24 @@ void select_ui_show()//选择界面
 void pid_ui_show()//PID界面
 {
     move_bar(&pid_line_y, &pid_line_y_trg);
+    move(&pid_y, &pid_y_trg);
     move(&pid_box_y, &pid_box_y_trg);
-    move_width(&pid_box_width, &pid_box_width_trg, pid_select, key_msg.id);//修改pid_select加1，修复指针问题
-    u8g2.drawVLine(126, 0, 61);
+    move_width(&pid_box_width, &pid_box_width_trg, pid_select, key_msg.id);
+    u8g2.drawVLine(126, 0, pid_total_line_length);
     u8g2.drawPixel(125, 0);
     u8g2.drawPixel(127, 0);
     for (uint8_t i = 0; i < pidSize; ++i)
     {
-       // Serial.println("-----------pidsize");
-       // Serial.println(pidSize);
-        //Serial.println(pid[i].select);
-        u8g2.drawStr(x, 16 * i + 12, pid[i].select);  // 第一段输出位置
-        u8g2.drawPixel(125, 15 * (i + 1));
-        u8g2.drawPixel(127, 15 * (i + 1));
+        u8g2.drawStr(pid_x, 16 * i + pid_y + 12, pid[i].select);  // 第一段输出位置
+        u8g2.drawPixel(125, pid_single_line_length * (i + 1));
+        u8g2.drawPixel(127, pid_single_line_length * (i + 1));
     }
-
+    u8g2.drawVLine(125, pid_line_y, pid_single_line_length-1);
+    u8g2.drawVLine(127, pid_line_y, pid_single_line_length-1);
     u8g2.setDrawColor(2);
     u8g2.drawRBox(0, pid_box_y, pid_box_width, 16, 1);
     u8g2.setDrawColor(1);
-    u8g2.drawVLine(125, pid_line_y, 14);
-    u8g2.drawVLine(127, pid_line_y, 14);
+
 }
 
 void pid_edit_ui_show()//显示PID编辑
@@ -878,62 +848,62 @@ void icon_ui_show(void)//显示icon
     }
 
 }
-void chart_draw_frame()//chart界面
-{
-
-    u8g2.drawStr(4, 12, "Real time angle :");
-    u8g2.drawRBox(4, 18, 120, 46, 8);
-    u8g2.setDrawColor(2);
-    u8g2.drawHLine(10, 58, 108);
-    u8g2.drawVLine(10, 24, 34);
-    //箭头
-    u8g2.drawPixel(7, 27);
-    u8g2.drawPixel(8, 26);
-    u8g2.drawPixel(9, 25);
-
-    u8g2.drawPixel(116, 59);
-    u8g2.drawPixel(115, 60);
-    u8g2.drawPixel(114, 61);
-    u8g2.setDrawColor(1);
-
-}
-void chart_ui_show()//chart界面
-{
-    if (!frame_is_drawed)//框架只画一遍
-    {
-        u8g2.clearBuffer();
-        chart_draw_frame();
-        //  angle_last = 20.00 + (float)analogRead(READ) / 100.00;
-        frame_is_drawed = true;
-    }
-
-    u8g2.drawBox(96, 0, 30, 14);
-
-    u8g2.drawVLine(chart_x + 10, 59, 3);
-    if (chart_x == 100) chart_x = 0;
-
-    //u8g2.drawBox(chart_x+11,24,8,32);
-
-    u8g2.drawVLine(chart_x + 11, 24, 34);
-    u8g2.drawVLine(chart_x + 12, 24, 34);
-    u8g2.drawVLine(chart_x + 13, 24, 34);
-    u8g2.drawVLine(chart_x + 14, 24, 34);
-
-    //异或绘制
-    u8g2.setDrawColor(2);
-    //  angle = 20.00 + (float)analogRead(READ) / 100.00;
-    u8g2.drawLine(chart_x + 11, 58 - (int)angle_last / 2, chart_x + 12, 58 - (int)angle / 2);
-    u8g2.drawVLine(chart_x + 12, 59, 3);
-    angle_last = angle;
-    chart_x += 2;
-    u8g2.drawBox(96, 0, 30, 14);
-    u8g2.setDrawColor(1);
-
-
-    u8g2.setCursor(96, 12);
-    u8g2.print(angle);
-
-}
+//void chart_draw_frame()//chart界面
+//{
+//
+//    u8g2.drawStr(4, 12, "Real time angle :");
+//    u8g2.drawRBox(4, 18, 120, 46, 8);
+//    u8g2.setDrawColor(2);
+//    u8g2.drawHLine(10, 58, 108);
+//    u8g2.drawVLine(10, 24, 34);
+//    //箭头
+//    u8g2.drawPixel(7, 27);
+//    u8g2.drawPixel(8, 26);
+//    u8g2.drawPixel(9, 25);
+//
+//    u8g2.drawPixel(116, 59);
+//    u8g2.drawPixel(115, 60);
+//    u8g2.drawPixel(114, 61);
+//    u8g2.setDrawColor(1);
+//
+//}
+//void chart_ui_show()//chart界面
+//{
+//    if (!frame_is_drawed)//框架只画一遍
+//    {
+//        u8g2.clearBuffer();
+//        chart_draw_frame();
+//        //  angle_last = 20.00 + (float)analogRead(READ) / 100.00;
+//        frame_is_drawed = true;
+//    }
+//
+//    u8g2.drawBox(96, 0, 30, 14);
+//
+//    u8g2.drawVLine(chart_x + 10, 59, 3);
+//    if (chart_x == 100) chart_x = 0;
+//
+//    //u8g2.drawBox(chart_x+11,24,8,32);
+//
+//    u8g2.drawVLine(chart_x + 11, 24, 34);
+//    u8g2.drawVLine(chart_x + 12, 24, 34);
+//    u8g2.drawVLine(chart_x + 13, 24, 34);
+//    u8g2.drawVLine(chart_x + 14, 24, 34);
+//
+//    //异或绘制
+//    u8g2.setDrawColor(2);
+//    //  angle = 20.00 + (float)analogRead(READ) / 100.00;
+//    u8g2.drawLine(chart_x + 11, 58 - (int)angle_last / 2, chart_x + 12, 58 - (int)angle / 2);
+//    u8g2.drawVLine(chart_x + 12, 59, 3);
+//    angle_last = angle;
+//    chart_x += 2;
+//    u8g2.drawBox(96, 0, 30, 14);
+//    u8g2.setDrawColor(1);
+//
+//
+//    u8g2.setCursor(96, 12);
+//    u8g2.print(angle);
+//
+//}
 
 
 
@@ -995,56 +965,29 @@ char* UserIn;
 void aboutdev_ui_show()//about界面
 {
     //  std::string SiteStr = SiteIn;
- //   u8g2.drawStr(2, 10, "---Press to Driver---");
-  //  u8g2.drawStr(2, 10, "---Press to Driver---");
-  //  u8g2.drawStr(2, 10, "---Press to Driver---");
+    //   u8g2.drawStr(2, 10, "---Press to Driver---");
+    //  u8g2.drawStr(2, 10, "---Press to Driver---");
+    //  u8g2.drawStr(2, 10, "---Press to Driver---");
 //u8g2.setContrast(10);
-     u8g2.drawStr(2,12,"MCU      :       ESP32C3");
-     u8g2.drawStr(2,28,"FLASH    :            4MB");
-     u8g2.drawStr(2,44,"Site     :    yang17.site");
-     u8g2.drawStr(2,60,"Firmware :          V3.0");
+    u8g2.drawStr(2,12,"MCU      :       ESP32C3");
+    u8g2.drawStr(2,28,"FLASH    :            4MB");
+    u8g2.drawStr(2,44,"Site     :    yang17.site");
+    u8g2.drawStr(2,60,"Firmware :          V3.0");
 
 }
-void about_ui_show()//about界面
-{
-    //  std::string SiteStr = SiteIn;
-    Serial.println("PUSH---------");
-    Serial.println(SiteIn);
-    Serial.println(UserIn);
-    Serial.println(passwordIn);
-    std::string SiteStr = SiteIn;
-    // Concatenate the strings
-    std::string SiteString = "Site: " + SiteStr;
-    std::string UserStr = UserIn;
+void TOTF_proc(string site,string totpkey);
 
-    // Concatenate the strings
-    std::string UserString = "User: " + UserStr;
-    std::string PasswordStr = passwordIn;
-
-    // Concatenate the strings
-    std::string PasswordString = "Password: " + PasswordStr;
-    u8g2.drawStr(2, 12, SiteString.c_str());
-    u8g2.drawStr(2, 28, UserString.c_str());
-    u8g2.drawStr(2, 44, PasswordString.c_str());
-    u8g2.drawStr(2, 60, "---Press to Driver---");
-
-    // u8g2.drawStr(2,12,"MCU : MEGA2560");
-    // u8g2.drawStr(2,28,"FLASH : 256KB");
-    // u8g2.drawStr(2,44,"SRAM : 8KB");
-    // u8g2.drawStr(2,60,"EEPROM : 4KB");
-
-}
-void import_ui_show()//about界面
-{
-
-
-    u8g2.setFont(u8g2_font_ncenB08_tr);
-    u8g2.setCursor(0, 10);
-
-    u8g2.print("Hello, World!");
-
-
-}
+//void import_ui_show()//about界面
+//{
+//
+//
+//    u8g2.setFont(u8g2_font_ncenB08_tr);
+//    u8g2.setCursor(0, 10);
+//
+//    u8g2.print("Hello, World!");
+//
+//
+//}
 /**************************界面处理*******************************/
 
 void logo_proc()//logo界面处理函数
@@ -1053,16 +996,16 @@ void logo_proc()//logo界面处理函数
     {
 
 
-            key_msg.pressed = false;
+        key_msg.pressed = false;
 
-                    if(passwordst==0) {
-                    ui_state = S_DISAPPEAR;
-                    ui_index = M_ICON;
-                    }else{
-                        key_msg.pressed = false;
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_TEXT_EDIT;
-                    }
+        if(passwordst==0) {
+            ui_state = S_DISAPPEAR;
+            ui_index = M_ICON;
+        }else{
+            key_msg.pressed = false;
+            ui_state = S_DISAPPEAR;
+            ui_index = M_TEXT_EDIT;
+        }
 
 
     }
@@ -1108,38 +1051,55 @@ void pid_proc()//pid界面处理函数
         Serial.println("-------------------");
         Serial.println(pid_select);
         Serial.println(pidSize);
+
         switch (key_msg.id)
         {
+
             //  Serial.println(pid_select);
             case 0:
-                if (pid_select != 0)
+                // Serial.println("=============");
+                //   Serial.println(pid_select);
+                if (pid_select < 1) break;
+                pid_select -= 1;
+                pid_line_y_trg -= pid_single_line_length;
+                if (pid_select < -(pid_y / 16))
                 {
-                    pid_select -= 1;
-                    pid_line_y_trg -= 15;
-                    pid_box_y_trg -= 16;
-                    break;
+                    pid_y_trg += 16;
                 }
                 else
                 {
-                    break;
+                    pid_box_y_trg -= 16;
                 }
+                break;
+
+
             case 1:
-                if (pid_select != pidSize-1)//修改pidSize-1，修复back导致数组溢出，下同
+
+                if ((pid_select + 2) > pidSize) break;
+                pid_select += 1;
+                pid_line_y_trg += pid_single_line_length;
+                if ((pid_select + 1) > (4 - pid_y / 16))
                 {
-                    pid_select += 1;
-                    pid_line_y_trg += 15;
+                    pid_y_trg -= 16;
+                }
+                else
+                {
                     pid_box_y_trg += 16;
                 }
-                else
-                {
-                    break;
-                }
+
+
                 break;
             case 2:
                 if (pid_select == pidSize-1)
                 {
+                    if(modelchooese==5||modelchooese==4||modelchooese==6){
+                        modelchooese = 2;
+                    }
+
                     ui_index = M_SELECT;
                     ui_state = S_DISAPPEAR;
+                    pid_x = 4;
+                    pid_y = pid_y_trg = 0;
                     pid_select = 0;
                     pid_line_y = pid_line_y_trg = 1;
                     pid_box_y = pid_box_y_trg = 0;
@@ -1153,25 +1113,88 @@ void pid_proc()//pid界面处理函数
                     addPassword(SiteIn, UserIn);
                     ui_index = M_ABOUT;
 
-                }else{
+                }  else if(modelchooese==3){
+
+                    //json
+                    Serial.println("totp in");
+                    UserIn = pid[pid_select].select;
+                    addPassword(SiteIn, UserIn);
+                    ui_index = M_ABOUT;
+
+                }else if (modelchooese == 4) {
                     Serial.println("at seting--------------------------------------------!!!!!!!!!!!!!!");
                     Serial.println(pid_select);
                     switch (pid_select) {
                         case 0:
                             display_time=60000;
-                            ui_index = M_SELECT;
+                            modelchooese = 2;
                             ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
                             break;
                         case 1:
                             display_time=300000;
-                            ui_index = M_SELECT;
+                            modelchooese = 2;
                             ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
                             break;
                         case 2:
                             display_time=0;
-                            ui_index = M_SELECT;
+                            modelchooese = 2;
                             ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
                             break;
+                            // u8g2.setContrast(50);
+                    }
+                }else if (modelchooese == 5) {
+                    Serial.println("at seting--------------------------------------------!!!!!!!!!!!!!!");
+                    Serial.println(pid_select);
+                    switch (pid_select) {
+                        case 0:
+                            u8g2.setContrast(0);
+                            modelchooese = 2;
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
+
+
+                            break;
+
+                        case 1:
+                            u8g2.setContrast(100);
+                            modelchooese = 2;
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
+                            break;
+
+                        case 2:
+                            u8g2.setContrast(200);
+                            modelchooese = 2;
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
+                            break;
+
+                    }
+                }else if (modelchooese == 6) {
+                    Serial.println("at seting--------------------------------------------!!!!!!!!!!!!!!");
+                    Serial.println(pid_select);
+                    switch (pid_select) {
+                        case 0:
+                            bleKeyboard.begin();
+                            modelchooese = 2;
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
+
+
+                            break;
+
+                        case 1:
+                            bleKeyboard.end();
+                            modelchooese = 2;
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_SELECT;
+                            break;
+
+
+
                     }
                 }
                 break;
@@ -1225,7 +1248,7 @@ void select_proc(void)//选择界面处理重要的
                 {
                     case 0:     //return
                         ui_state = S_DISAPPEAR; //S_DISAPPEAR;
-                        ui_index = M_LOGO;//M_LOGO;
+                        ui_index = M_ICON;//M_LOGO;
                         break;
 //                    case 1:     //pid
 //                        addUser(list[ui_select].select);
@@ -1275,7 +1298,6 @@ void select_proc(void)//选择界面处理重要的
                             ui_state = S_DISAPPEAR;
                             File file = SD.open("/"+(String)list[ui_select].select+".txt");
                             if (file) {
-                                Serial.println("txt on");
                                 while (file.available()) {
                                     textContent += (char)file.read();
                                 }
@@ -1284,11 +1306,9 @@ void select_proc(void)//选择界面处理重要的
                                 Serial.println("无法打开文件");
                             }
 
-                            // 计算总行数
-                            totalLines = textContent.length() / (MAX_CHARS_PER_LINE + 1);  // 假设每行除了字符外还有换行符
-                            if (textContent.length() % (MAX_CHARS_PER_LINE + 1) != 0) {
-                                totalLines++;
-                            }
+                            // 计算总页数
+                            totalPages = ceil((float)textContent.length() / (DISPLAY_ROWS * CHARACTERS_PER_LINE));
+
                             Serial.println("txt connte");
                             Serial.println("txt in");
 
@@ -1301,6 +1321,20 @@ void select_proc(void)//选择界面处理重要的
                             Serial.println(list[ui_select].select);
                             ui_state = S_DISAPPEAR;
                             ui_index = M_SET;
+                        }else if (modelchooese == 3) {
+                            SiteIn = list[ui_select].select;
+                            // if(justonece==0) {//防止重复向数组写入导致内存浪费溢出
+                            addUser(list[ui_select].select);
+                            //     justonece+=1;
+                            //   }
+                            pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
+                            ui_state = S_DISAPPEAR;
+                            ui_index = M_PID;
+                            break;
+//                            Serial.print("NOW:");
+//                            Serial.println(list[ui_select].select);
+//                            ui_state = S_DISAPPEAR;
+//                            ui_index = M_TOTF;
                         }
                     }
                 }
@@ -1316,37 +1350,96 @@ void select_proc(void)//选择界面处理重要的
     }
     select_ui_show();
 }
+int WIFIst=0;
+
+long epochTime;
 void setting(int select){
     switch (select) {
         case 1:
+            free(pid);
+            pid = NULL;
+            pidSize=3;//此值自增1才可出返回设置//此值存在问题，需要修复！超出4则UI错误
+            modelchooese = 6;
+
+
+            pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+            pid[0].select =strdup("ON BLE");
+            pid[1].select =strdup("OFF BLE");
+            pid[2].select =strdup("Back");
+            pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
+            ui_state = S_DISAPPEAR;
+            ui_index = M_PID;
+            break;
+        case 2://时间同步模式
+            // Serial.begin(115200);
+            u8g2.drawStr(2, 12, "Wait WIFI CONNECT!");
+            if(WIFIst==0) {
+                WiFi.begin(ssid, password);
+                if (WiFi.status() == WL_CONNECTED) {
+                    timeClient.forceUpdate();
+                    epochTime = timeClient.getEpochTime();
+                    WiFi.disconnect();
+                    u8g2.drawStr(2, 44, "Can not connect!");
+                    WIFIst=1;
+                }else{
+                    u8g2.drawStr(2, 44, "Was connect!");
+                }
+
+            }
+            Serial.println("Epoch Time: " + String(epochTime));
+
+
+
+            break;
+        case 3://密码设置模式
             ui_state = S_DISAPPEAR;
             ui_index = M_TEXT_EDIT;
             break;
-        case 2:
+        case 4:
+            free(pid);
+            pid = NULL;
+            pidSize=4;//此值自增1才可出返回设置//此值存在问题，需要修复！超出4则UI错误
+            modelchooese = 5;
+
+
+            pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+            pid[0].select =strdup("10%");
+
+            // pid[2].select =strdup("10min");//未知，缺少size函数
+            pid[1].select =strdup("50%");
+
+            pid[2].select =strdup("100%");
+            pid[3].select =strdup("Back");
+            pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
+            ui_state = S_DISAPPEAR;
+            ui_index = M_PID;
+            break;
+
+        case 5://息屏时长设置（该功能有待完善，主要体现在息屏时间判断不完善）
             free(pid);
             pid = NULL;
             pidSize=4;//此值自增1才可出返回设置
 
-
+            modelchooese=4;
 
             pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
             pid[0].select =strdup("1min");
             pid[1].select =strdup("5min");
-           // pid[2].select =strdup("10min");//未知，缺少size函数
+            // pid[2].select =strdup("10min");//未知，缺少size函数
             pid[2].select =strdup("Never");
             pid[3].select =strdup("Back");
             pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
             ui_state = S_DISAPPEAR;
             ui_index = M_PID;
             break;
-        case 3:
-           // ui_state = S_DISAPPEAR;
+        case 6://升级功能（待实现）
+            // ui_state = S_DISAPPEAR;
             u8g2.drawStr(2,12,"Not Find New DATA !");
-          //  u8g2.drawStr(2,28,"FLASH    :            4MB");
+            //  u8g2.drawStr(2,28,"FLASH    :            4MB");
             u8g2.drawStr(2,44,"Press any key go back");
-           // u8g2.drawStr(2,60,"Firmware :          V3.0");
+            // u8g2.drawStr(2,60,"Firmware :          V3.0");
             break;
-        case 4:
+        case 7://展示设备信息
             ui_state = S_DISAPPEAR;
             ui_index = M_ABOUTDEV;
             break;
@@ -1365,7 +1458,7 @@ void set_proc(){
         switch (key_msg.id)
         {
             case 2: {
-
+                //按键操作已经在setting内实现
                 //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
             }
             default:
@@ -1379,8 +1472,9 @@ void set_proc(){
 
 }
 void black_proc(){
-   // setting(ui_select);
-   // Serial.println("txgog11111111111111ogote");
+
+    // setting(ui_select);
+    // Serial.println("txgog11111111111111ogote");
     if (key_msg.pressed)
     {
         key_msg.pressed = false;
@@ -1398,6 +1492,36 @@ void black_proc(){
 
         }
     }
+
+}
+long GMT;
+
+char code[6];
+void TOTF_proc(char* site, char* totpkey) {
+    TOTP totp = TOTP();
+// 调整大小以容纳空终止符
+    char *newCode = totp.getCode(totpkey, 30, timeClient.getEpochTime());
+
+    // 检查 newCode 是否有效
+
+    strcpy(code, newCode);
+    Serial.println(GMT);
+    Serial.print("---> CODE[");
+    Serial.print(code);
+
+    int screenWidth = u8g2.getWidth();
+    int textWidth = u8g2.getStrWidth(site);
+    int x = (screenWidth - textWidth) / 2;
+    int y = 20; // 垂直位置
+    int textWidth2 = u8g2.getStrWidth(code);
+    int x2 = (screenWidth - textWidth2) / 2;
+
+    u8g2.drawStr(x, y, site);
+    u8g2.drawStr(x2, y + 20, code);
+    //     bleKeyboard.print(code);
+    // 连接到 Wi-Fi
+
+    Serial.print("---> CODE[");
 
 }
 
@@ -1432,14 +1556,14 @@ void icon_proc(void)//icon界面处理
 
 
                 switch (icon_select) {
-                    case 0: ui_state = S_DISAPPEAR;
+                    case 0: ui_state = S_DISAPPEAR;//主界面
                         ui_index = M_LOGO;
                         break;
-                    case 1: {
+                    case 1: {//密钥模式，用于展示TF卡内的json格式密钥文件
                         modelchooese=0;
                         allcount();
                         addSiteDataToArr();
-                        list[0].select = strdup("HOME");
+                        list[0].select = strdup("HOME");//插入主界面返回按键，此按键应当固定于数组首位
 
                         box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
 
@@ -1458,13 +1582,11 @@ void icon_proc(void)//icon界面处理
 
                         break;
                     }
-                    case 2:
-//                        ui_state = S_DISAPPEAR;
-//                        ui_index = M_IMPORT;
-                        modelchooese=1;
+                    case 2://TOTP模式，建议设计参考1，Webkey调用json
+                        modelchooese=3;
                         allcount();
                         addSiteDataToArr();
-                        list[0].select = strdup("HOME");
+                        list[0].select = strdup("HOME");//插入主界面返回按键，此按键应当固定于数组首位
 
                         box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
 
@@ -1482,29 +1604,58 @@ void icon_proc(void)//icon界面处理
                         ui_index = M_SELECT;
 
                         break;
-                    case 3:
+                    case 3://文档模式，用于展示TF卡内的TXT文件及内容
+//                        ui_state = S_DISAPPEAR;
+//                        ui_index = M_IMPORT;
+                        modelchooese=1;
+                        allcount();
+                        addSiteDataToArr();
+                        list[0].select = strdup("HOME");//同1
+
+                        box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
+
+                        //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
+                        //  pid[0].select = strdup("main");
+                        // 动态分配内存以存储结构体数组
+
+                        qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
+
+                        // 在串口上打印按照字母顺序排序后的结果
+                        for (int i = 0; i < listSize; i++) {
+                            Serial.println(list[i].select);
+                        }
+                        ui_state = S_DISAPPEAR;
+                        ui_index = M_SELECT;
+
+                        break;
+                    case 4://设置模式（可进行方法归类）
 //                        ui_state = S_DISAPPEAR;
 //                        ui_index = M_IMPORT;
                         Serial.println("ui_select11");
                         modelchooese=2;
-                        listSize=5;
+                        listSize=8;
                         Serial.println("ui_select22");
                         free(list);
                         list = NULL;
                         list = (SELECT_LIST*)malloc(listSize * sizeof(SELECT_LIST));
                         list[0].select = strdup("HOME");
-                        list[1].select = strdup("Password");
-                        list[2].select = strdup("Back light");
-                        list[3].select = strdup("Updata");
-                        list[4].select = strdup("About");
+                        list[1].select = strdup("BLE Connect");
+                        list[2].select = strdup("Updata Time");
+                        list[3].select = strdup("Password");//插入功能按键
+                        list[4].select = strdup("Back light");
+                        list[5].select = strdup("Display Time");
+                        list[6].select = strdup("Updata");
+                        list[7].select = strdup("About");
+
                         Serial.println("ui_selectsadad");
+                        pid_box_width = pid_box_width_trg = u8g2.getStrWidth(pid[pid_select].select) + x * 2;//两边各多2
                         box_width = box_width_trg = u8g2.getStrWidth(list[ui_select].select) + x * 2;//两边各多2
                         Serial.println("ui_select33");
                         //  pid = (SELECT_LIST*)malloc(pidSize * sizeof(SELECT_LIST));
                         //  pid[0].select = strdup("main");
                         // 动态分配内存以存储结构体数组
 
-                       // qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
+                        // qsort(list + 1, listSize - 1, sizeof(SELECT_LIST), compare);
                         Serial.println("ui_select33");
                         // 在串口上打印按照字母顺序排序后的结果
                         for (int i = 0; i < listSize; i++) {
@@ -1514,15 +1665,15 @@ void icon_proc(void)//icon界面处理
                         ui_index = M_SELECT;
                         Serial.println("ui_select3366");
                         break;
-                    case 4:
-                        if(Passwordis!=""){
+                    case 5://锁屏模式
+                        if(Passwordis[0] != '\0'){//未设置密码时
                             passwordst=1;
                         }
-                        ui_state = S_DISAPPEAR;
-                        ui_index = M_LOGO;
+                        ui_state = S_DISAPPEAR;//息屏
+                        ui_index = M_BLACK;
                         break;
                 }
-                Serial.println("button press");
+                Serial.println("button press");//调试输出
                 Serial.println(icon_select);
                 Serial.println(icon_x);
                 Serial.println( app_y);
@@ -1539,43 +1690,48 @@ void icon_proc(void)//icon界面处理
     }
 }
 
-void chart_proc()//chart界面处理函数
-{
-    chart_ui_show();
-    if (key_msg.pressed)
-    {
-        key_msg.pressed = false;
-        ui_state = S_DISAPPEAR;
-        ui_index = M_SELECT;
-        frame_is_drawed = false;//退出后框架为未画状态
-        chart_x = 0;
-    }
-}
+//void chart_proc()//chart界面处理函数
+//{
+//    chart_ui_show();
+//    if (key_msg.pressed)
+//    {
+//        key_msg.pressed = false;
+//        ui_state = S_DISAPPEAR;
+//        ui_index = M_SELECT;
+//        frame_is_drawed = false;//退出后框架为未画状态
+//        chart_x = 0;
+//    }
+//}
 void passwordmode(){
     for (int i = 0; i < 6; i++) {
-        if (name[i] != '\0') {
+        if (name[i] != '\0') {//输入不为空
 
 
-            if (passwordst == 0) {
-                Passwordis = name;
+            if (passwordst == 0) {//未设置密码状态下设置密码
+                strcpy(Passwordis, name);//密码等于输入
                 passwordst=1;
                 ui_state = S_DISAPPEAR;
                 ui_index = M_LOGO;
-            }else if (passwordst == 1&&Passwordis == name) {
+            }else if (passwordst == 1&&strcmp(name, Passwordis) == 0) {//设备解锁，存在密码切密码等于输入
                 passwordst=0;
                 ui_state = S_DISAPPEAR;
                 ui_index = M_ICON;
 
-            }else{
+            }else if (passwordst == 1&&strcmp(name, Passwordis) != 0) {//密码错误，设备不解锁，存在密码，密码不等于输入
                 ui_state = S_DISAPPEAR;
                 ui_index = M_LOGO;
             }
             break;
 
-        }else{
+        }else{//输入为空状态下
 
 
-            if (passwordst == 0) {
+            if (passwordst == 0) {//未设置密码
+                ui_state = S_DISAPPEAR;
+                ui_index = M_LOGO;
+            }else{//输入为空且设置密码状态下
+                //  Passwordis[0]='\0';//首位为空
+                memset(name, '\0', sizeof(Passwordis));//密码初始化，取消密码设置
                 ui_state = S_DISAPPEAR;
                 ui_index = M_LOGO;
             }
@@ -1585,6 +1741,7 @@ void passwordmode(){
 }
 void text_edit_proc()
 {
+//    memset(name, '\0', sizeof(name));
     text_edit_ui_show();
     if (key_msg.pressed)
     {
@@ -1630,11 +1787,12 @@ void text_edit_proc()
             case 2:
                 if (edit_index == name_len) {
 
-                    edit_index = 0;
+
 
                     passwordmode();
-
-                    memset(name, '\0', sizeof(name));
+                    edit_index = 0;
+                    blink_flag = 0;
+                    memset(name, '\0', 6);
                 }
                 else
                 {
@@ -1647,16 +1805,98 @@ void text_edit_proc()
         }
     }
 }
+void about_ui_show()//about界面
+{
+    if(modelchooese==0) {
+        //  std::string SiteStr = SiteIn;
+        Serial.println("PUSH---------");
+        Serial.println(SiteIn);
+        Serial.println(UserIn);
+        Serial.println(passwordIn);
+        std::string SiteStr = SiteIn;
+        // Concatenate the strings
+        std::string SiteString = "Site: " + SiteStr;
+        std::string UserStr = UserIn;
 
+        // Concatenate the strings
+        std::string UserString = "User: " + UserStr;
+
+        u8g2.drawStr(2, 12, SiteString.c_str());
+        u8g2.drawStr(2, 28, UserString.c_str());
+
+        u8g2.drawStr(2, 60, "---Press to Driver---");
+
+    }else if (modelchooese==3){
+
+
+        TOTF_proc(SiteIn,passwordIn);
+
+    }
+
+    // u8g2.drawStr(2,12,"MCU : MEGA2560");
+    // u8g2.drawStr(2,28,"FLASH : 256KB");
+    // u8g2.drawStr(2,44,"SRAM : 8KB");
+    // u8g2.drawStr(2,60,"EEPROM : 4KB");
+
+}
 void about_proc()//about界面处理函数
 {
+    if (key_msg.pressed) {
+
+        if (modelchooese == 0) {//预留蓝牙输入接口
+            if (bleKeyboard.isConnected()) {
+                Serial.println("Sending 'Hello world'...");
+                bleKeyboard.print(UserIn);
+            }
+            key_msg.pressed = false;
+            ui_state = S_DISAPPEAR;
+            ui_index = M_ABOUT_pass;
+        } else if (modelchooese == 3) {
+            if (bleKeyboard.isConnected()) {
+                Serial.println("Sending 'Hello world'...");
+                bleKeyboard.print(code);
+            }
+            key_msg.pressed = false;
+
+            modelchooese = 3;
+            ui_state = S_DISAPPEAR;
+            ui_index = M_SELECT;
+
+
+        } else {
+            key_msg.pressed = false;
+            ui_state = S_DISAPPEAR;
+            ui_index = M_SELECT;
+        }
+    }
+    about_ui_show();
+}
+void about_pass_ui_show(){
+    std::string PasswordStr = passwordIn;
+    // Concatenate the strings
+    std::string PasswordString = "Password: " + PasswordStr;
+    u8g2.drawStr(2, 44, PasswordString.c_str());
+
+}
+void about_pass_proc(){
     if (key_msg.pressed)
     {
         key_msg.pressed = false;
-        ui_state = S_DISAPPEAR;
-        ui_index = M_SELECT;
+        switch (key_msg.id)
+        {
+
+            default:
+                if(bleKeyboard.isConnected()) {//预留蓝牙输入接口
+                    Serial.println("Sending 'Hello world'...");
+                    bleKeyboard.print(passwordIn);
+                }
+                ui_state = S_DISAPPEAR;
+                ui_index = M_SELECT;
+                break;
+
+        }
     }
-    about_ui_show();
+    about_pass_ui_show();
 }
 void aboutdev_proc()//about界面处理函数
 {
@@ -1705,13 +1945,12 @@ void import_proc()//about界面处理函数
 }
 void txtred_proc(){
 
-    if (currentPage >= totalLines / MAX_LINES_PER_PAGE) {
-        currentPage = 0;
-    }
+
     Serial.println("txt wait");
-    drawPage(currentPage * MAX_LINES_PER_PAGE);
+    drawPage(currentPage);
     Serial.print("当前页码: ");
     Serial.println(currentPage);
+   // delay(200);
     // delay(200);
 
     if (key_msg.pressed)
@@ -1719,14 +1958,23 @@ void txtred_proc(){
         key_msg.pressed = false;
         switch (key_msg.id)
         {
-            case 2: {
-                currentPage++;
+            case 0: {
+                currentPage--;
+                break;
                 //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
             }
-            default:
+            case 1: {
+                currentPage++;
+                if (currentPage >= totalPages) {
+                    currentPage = 0;
+                }
+                break;
+                //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+            }
+            case 2:
                 ui_state = S_DISAPPEAR;
                 ui_index = M_SELECT;
-                totalLines=0;
+                currentPage=0;
                 textContent="";
 
                 break;
@@ -1758,9 +2006,9 @@ void ui_proc()//总的UI进程
                 case M_ICON:
                     icon_proc();
                     break;
-                case M_CHART:
-                    chart_proc();
-                    break;
+//                case M_CHART:
+//                    chart_proc();
+//                    break;
                 case M_TEXT_EDIT:
                     text_edit_proc();
                     break;
@@ -1770,6 +2018,10 @@ void ui_proc()//总的UI进程
                 case M_ABOUT:
 
                     about_proc();
+                    break;
+                case M_ABOUT_pass:
+
+                    about_pass_proc();
                     break;
                 case M_ABOUTDEV:
 
@@ -1787,6 +2039,9 @@ void ui_proc()//总的UI进程
                 case M_BLACK:
                     black_proc();
                     break;
+//                case M_TOTF:
+//                    TOTF_proc(String site,String totpkey);
+//                    break;
                 default:
                     break;
             }
@@ -1809,7 +2064,13 @@ void addUser(char* mainnowdisplay){
     pid = NULL;
     Serial.println("Btn2----------------------");
     Serial.println(mainnowdisplay);
-    String filePath = String("/") + String(mainnowdisplay)+String(".json") ;
+
+    String filePath;
+    if(modelchooese==0){
+        filePath = String("/") + String(mainnowdisplay)+String(".web");
+    }else if(modelchooese==3){
+        filePath = String("/") + String(mainnowdisplay)+String(".totp");
+    }
     // 打开 data.json 文件
     File jsonFile = SD.open(filePath);
     if (!jsonFile) {
@@ -1857,7 +2118,7 @@ void addUser(char* mainnowdisplay){
         pid[num].select =strdup(keyValue.key().c_str());
         num++;
     }
-    pid[num].select =strdup("back");
+    pid[num].select =strdup("Back");
     qsort(pid, pidSize, sizeof(SELECT_LIST), compare2);
 
     // 在串口上打印按照字母顺序排序后的结果
@@ -1873,9 +2134,13 @@ void addUser(char* mainnowdisplay){
 }
 
 void addPassword(char* mainsite,char* mainuser){
-
-
-    String filePath = String("/") + String(mainsite)+String(".json");
+    String filePath;
+    if(modelchooese==0){
+        filePath = String("/") + String(mainsite)+String(".web");
+    }else if(modelchooese==3){
+        filePath = String("/") + String(mainsite)+String(".totp");
+    }
+    // String filePath = String("/") + String(mainsite)+String(".web");
     // 打开 data.json 文件
     File jsonFile = SD.open(filePath);
 
@@ -1919,11 +2184,13 @@ void addPassword(char* mainsite,char* mainuser){
 }
 
 void allcount(){
-    char* model=".json";
+    char* model=".web";
     if(modelchooese==0){
-        model=".json";
-    }else{
+        model=".web";
+    }else if(modelchooese==1){
         model=".txt";
+    }else if(modelchooese==3){
+        model=".totp";
     }
 
     File root = SD.open("/");
@@ -1951,11 +2218,13 @@ void allcount(){
 void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数组中，界面分类用
     free(list);
     list = NULL;
-    char* model=".json";
+    char* model=".web";
     if(modelchooese==0){
-        model=".json";
-    }else{
+        model=".web";
+    }else if(modelchooese==1){
         model=".txt";
+    }else if(modelchooese==3){
+        model=".totp";
     }
     Serial.println(model);
     Serial.println("read JSON Start:");
@@ -1983,11 +2252,14 @@ void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数�
 
                 char* newFilename = new char[length]; // 创建动态分配的新字符串来存储较短的文件名
                 if(modelchooese==0) {
-                    strncpy(newFilename, filename, length - 5);
-                    newFilename[length - 5] = '\0'; // 添加字符串终止符
-                }else{
                     strncpy(newFilename, filename, length - 4);
                     newFilename[length - 4] = '\0'; // 添加字符串终止符
+                }else if(modelchooese==1){
+                    strncpy(newFilename, filename, length - 4);
+                    newFilename[length - 4] = '\0'; // 添加字符串终止符
+                }else if(modelchooese==3){
+                    strncpy(newFilename, filename, length - 5);
+                    newFilename[length - 5] = '\0'; // 添加字符串终止符
                 }
                 list[index+1].select = strdup(newFilename);
                 index++;
@@ -2000,7 +2272,7 @@ void addSiteDataToArr() {//此函数提供方法使其全部网站保存在数�
 }
 void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
     Serial.begin(115200);
-
+    Serial.println("Starting BLE work!");
 
 
 
@@ -2029,6 +2301,8 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
 
     x = 4;
     y = y_trg = 0;
+    pid_x = 4;
+    pid_y = pid_y_trg = 0;
     line_y = line_y_trg = 1;
     pid_line_y = pid_line_y_trg = 1;
     ui_select = pid_select = icon_select = 0;
@@ -2037,43 +2311,39 @@ void setup() {//加大审查，尽量关闭sd卡使用时间延长寿命
 
     u8g2.setFont(u8g2_font_ncenB08_tr);
     ui_index = M_LOGO;
-   // ui_index=M_TEXT_EDIT;
+    // ui_index=M_TEXT_EDIT;
     ui_state = S_NONE;
     Serial.println("entry2");
 }
 unsigned long previousMillis = 0;
 //const long interval = 60000; // 5 minutes in milliseconds
 void loop() {
-  //  Serial.println("entry3");
+    //  Serial.println("entry3");
     unsigned long currentMillis = millis();
-if(display_time!=0) {
-    if (currentMillis - previousMillis >= display_time) {
-        // 在这里执行您想要每隔5分钟执行的任务
-        // 例如，您可以添加要执行的代码块或调用函数
+    if(display_time!=0) {
+        if (currentMillis - previousMillis >= display_time) {
+            // 在这里执行您想要每隔5分钟执行的任务
+            // 例如，您可以添加要执行的代码块或调用函数
 
-        ui_state = S_DISAPPEAR;
-        setting(ui_select);
-        Serial.println("txgog11111111111111ogote");
-        if (key_msg.pressed) {
-            key_msg.pressed = false;
-            switch (key_msg.id) {
-                case 2: {
-
-                    //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+            ui_state = S_DISAPPEAR;
+            setting(ui_select);
+            Serial.println("txgog11111111111111ogote");
+            if (key_msg.pressed) {
+                key_msg.pressed = false;
+                switch (key_msg.id) {
+                    case 2: {
+                        //  writeCSV();存在危险操作，建议提高延迟，否则易损卡
+                    }
+                    default:
+                        previousMillis = currentMillis;
+                        ui_state = S_DISAPPEAR;
+                        ui_index = M_SELECT;
+                        break;
                 }
-                default:
-                    previousMillis = currentMillis;
-                    ui_state = S_DISAPPEAR;
-                    ui_index = M_SELECT;
-
-                    break;
-
             }
+            // 更新上一次执行任务的时间戳
         }
-        // 更新上一次执行任务的时间戳
-
     }
-}
     key_scan();
     ui_proc();
 }
