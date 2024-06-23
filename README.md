@@ -14,7 +14,9 @@
 </div>
 
 ## 演示视频
-[哔哩哔哩](https://www.bilibili.com/video/BV1NATFeLE5D/)
+[![KeyBox](https://res.cloudinary.com/marcomontalbano/image/upload/v1719168122/video_to_markdown/images/youtube--kEUG0me2HfA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/kEUG0me2HfA "KeyBox")
+
+[无法播放请点此使用BiliBili](https://www.bilibili.com/video/BV1NATFeLE5D/)
 ## 功能
 - ✅支持从浏览器导入网站密钥
 - ✅支持 TOTP 2FA实时验证码绑定
@@ -26,6 +28,10 @@
 ## 计划
 - [ ] 接入IOT万物互联客户端
 - [ ] 天气、时间、新闻、电量显示
+- [ ] 
+## 开源协议
+本项目遵循GPL2.0开源协议，使用本程序时请注明出处并进行版权声明  
+本项目完全支持个人爱好者的研究与学习，如果您有更好的建议，欢迎PR
 
 
 如遇问题，请向我提出issues
