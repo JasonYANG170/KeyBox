@@ -2,7 +2,7 @@
     <h1>KeyBox-ESP32C3电子钥匙</h1>
 
 
-![Static Badge](https://img.shields.io/badge/any_text-you_like-green?style=for-the-badge)
+![Static Badge](https://img.shields.io/badge/License-CC_BY_NC_SA_4.0-green?style=for-the-badge)
 ![Commit Activity](https://img.shields.io/github/commit-activity/w/JasonYANG170/KeyBox?style=for-the-badge&color=yellow)
 ![Languages Count](https://img.shields.io/github/languages/count/JasonYANG170/KeyBox?logo=c&style=for-the-badge)
 
