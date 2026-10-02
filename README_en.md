@@ -1,7 +1,7 @@
 [简体中文](README.md) | [English](README_en.md)
 
 <div align="center">
-    <h1>KeyBox-ESP32C3电子钥匙</h1>
+    <h1>KeyBox-ESP32C3 electronic key </h1>
 
 
 ![Static Badge](https://img.shields.io/badge/License-CC_BY_NC_SA_4.0-green?style=for-the-badge)
@@ -12,39 +12,39 @@
 
 ![KeyBox](https://github.com/JasonYANG170/KeyBox/assets/39414350/be60f9aa-8254-4ff5-99e1-27b5d7f49282)
 
-这是一项基于C语言的电子密钥存储器
+An electronic key storage device implemented in C.
 
 </div>
 
 
-## 演示视频
+## Demo video
 
 [![KeyBox](https://res.cloudinary.com/marcomontalbano/image/upload/v1719168122/video_to_markdown/images/youtube--kEUG0me2HfA-c05b58ac6eb4c4700831b2b3070cd403.jpg)](https://youtu.be/kEUG0me2HfA "KeyBox")
 
-[无法播放请点此使用BiliBili](https://www.bilibili.com/video/BV1NATFeLE5D/)
-## 功能
-- ✅支持从浏览器导入网站密钥
-- ✅支持 TOTP 2FA实时验证码绑定
-- ✅支持蓝牙模拟输入HID 
-- ✅支持 WIFI NTP  校时
-- ✅支持设置设备6位密码
-- ✅支持息屏
-- ✅支持屏幕亮度调节。
-## 计划
-- [ ] 接入IOT万物互联客户端
-- [ ] 天气、时间、新闻、电量显示
+[Unable to play, please click here to use BiliBili](https://www.bilibili.com/video/BV1NATFeLE5D/)
+## Features
+- ✅Supports importing website keys from the browser
+- ✅Support TOTP 2FA real-time verification code binding
+- ✅Bluetooth HID keyboard emulation
+- ✅Supports WIFI NTP time adjustment
+- ✅Supports setting a 6-digit device password
+- ✅Screen-off support
+- ✅Supports screen brightness adjustment.
+## Roadmap
+- [ ] Integrate with the IOTConnect client
+- [ ] Weather, time, news, power display
 
-## 开源协议
-本项目遵循CC BY-NC-SA 4.0开源协议，使用本程序时请注明出处并进行版权声明  
-本项目仅供学习研究与学习，严禁非授权的商业获利，  
-如果您有更好的建议，欢迎PR
+## Open Source Agreement
+This project follows the CC BY-NC-SA 4.0 open source agreement. When using this program, please indicate the source and make a copyright statement.
+This project is for study, research and study only, and unauthorized commercial profits are strictly prohibited.
+If you have better suggestions, please PR
 
 
-如遇问题，请向我提出issues
-## 喜欢这个项目，请为我点个Star ⭐ 
+If you encounter any problems, please submit issues to me
+## If you like this project, please give me a star ⭐
 
 [![Star History Chart](https://api.star-history.com/svg?repos=JasonYANG170/KeyBox&type=Date)](https://star-history.com/#star-history/star-history&Date)
-## 实物图
+## Actual picture
 
 | 1 | 2 |
 | --- | --- |
